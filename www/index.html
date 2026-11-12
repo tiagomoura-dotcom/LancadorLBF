@@ -1,0 +1,1719 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#15191F">
+<title>Lançador</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icone.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600..800&family=Figtree:wght@400..700&display=swap">
+<style>
+:root{
+  --bg:#F2F4F6;--surface:#FFFFFF;--surface-2:#F5F6F8;--ink:#15191F;--ink-2:#2E343D;--muted:#59606C;
+  --line:#DDE1E6;--line-2:#D0D5DC;--chip:#EEF0F3;--sel:#E8EBEF;--link:#1F4FD1;
+  --primary:#15191F;--on-primary:#FFFFFF;--ok:#0B6B5E;--star:#C98A00;--danger:#B3261E;
+  --warn-bg:#FFF4E5;--warn-line:#EBC08A;--warn-ink:#4A2A00;--warn-icon:#9A4A00;
+  --font:'Figtree',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  --display:'Bricolage Grotesque','Figtree',system-ui,sans-serif;
+  --px:32px;
+  color-scheme:light dark;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#101318;--surface:#181C22;--surface-2:#1E232A;--ink:#E8EBEF;--ink-2:#C9CED6;--muted:#A2A9B4;
+    --line:#2A3038;--line-2:#3A414C;--chip:#252B33;--sel:#262C35;--link:#8AB0FF;
+    --primary:#E8EBEF;--on-primary:#101318;--ok:#5CC8B4;--star:#F0B429;--danger:#FF8A80;
+    --warn-bg:#2E2111;--warn-line:#6B4A1F;--warn-ink:#F5D9B0;--warn-icon:#F0B060;
+  }
+  .tile,.swatch{background:color-mix(in srgb,var(--a) 30%,#181C22)!important;color:color-mix(in srgb,var(--a) 35%,#FFFFFF)!important}
+  .area-chip[aria-pressed="true"],.pill[aria-pressed="true"]{background:color-mix(in srgb,var(--a) 32%,#181C22)!important}
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+[data-icon]{display:contents}
+html,body{margin:0;height:100%}
+body{font-family:var(--font);background:var(--bg);color:var(--ink);font-size:15px;line-height:1.4;-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent;overscroll-behavior:none}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--link);outline-offset:2px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+svg.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+svg.i.fill{fill:currentColor;stroke:none}
+.strong{font-weight:600;margin:0}
+.spacer{flex:1}
+
+/* Botões */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 16px;border:1px solid var(--line-2);border-radius:10px;background:var(--surface);color:var(--ink);font-size:14px;font-weight:600;white-space:nowrap}
+.btn svg.i{width:18px;height:18px}
+.btn.primary{background:var(--primary);border-color:var(--primary);color:var(--on-primary)}
+.btn.big{min-height:50px;padding:0 22px;font-size:16px}
+.btn.wide{width:100%;min-height:46px;font-size:15px}
+.btn:disabled{opacity:.6;cursor:default}
+.btn.danger-text{border-color:transparent;background:transparent;color:var(--danger);padding:0 8px}
+.linkbtn{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 8px;border:0;background:transparent;color:var(--link);font-size:14px;font-weight:600}
+.linkbtn svg.i{width:16px;height:16px}
+.icon-btn{width:44px;height:44px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;border:0;border-radius:10px;background:transparent;color:var(--ink)}
+.icon-btn.round{border-radius:22px}
+.icon-btn.primary{background:var(--primary);color:var(--on-primary)}
+.icon-btn.bordered{border:1px solid var(--line-2);background:var(--surface)}
+
+/* Marca */
+.logo{width:36px;height:36px;flex-shrink:0;border-radius:7px;background:var(--primary);color:var(--on-primary);display:inline-flex;align-items:center;justify-content:center;font-family:var(--display);font-size:18px;font-weight:800}
+.logo.sm{width:32px;height:32px;font-size:16px}
+.logo.lg{width:64px;height:64px;border-radius:12px;font-size:32px}
+.brand{display:flex;align-items:center;gap:10px;padding:0 8px}
+.brand-name{font-family:var(--display);font-size:22px;font-weight:700;letter-spacing:-.02em}
+
+/* Estrutura */
+.shell{display:flex;height:100dvh;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+.sidebar{width:264px;flex-shrink:0;padding:24px 16px;background:var(--surface);border-right:1px solid var(--line);display:flex;flex-direction:column;gap:22px;overflow-y:auto}
+.navgroup,.navlist{display:flex;flex-direction:column;gap:2px}
+.navtitle{margin:0 0 6px;padding:0 12px;font-size:13px;font-weight:600;color:var(--muted)}
+.navitem{width:100%;display:flex;align-items:center;gap:12px;min-height:44px;padding:0 12px;border:0;border-radius:8px;background:transparent;color:var(--ink);font-size:15px;font-weight:500;text-align:left}
+.navitem svg.i{width:18px;height:18px}
+.navitem[aria-current="page"]{background:var(--sel);font-weight:600}
+.navitem.muted{color:var(--muted)}
+.grow{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.count{font-size:13px;color:var(--muted)}
+.sq{display:inline-block;width:14px;height:14px;flex-shrink:0;border-radius:4px;background:var(--a)}
+.chips{display:flex;gap:6px}
+.chips.wrap{flex-wrap:wrap;padding:0 8px}
+.chip{display:inline-flex;align-items:center;gap:6px;flex-shrink:0;min-height:36px;padding:0 12px;border:1px solid var(--line-2);border-radius:18px;background:var(--surface);color:var(--ink);font-size:13px;font-weight:500;white-space:nowrap}
+.chip svg.i{width:14px;height:14px}
+.chip[aria-pressed="true"],.chip.solid{background:var(--primary);border-color:var(--primary);color:var(--on-primary)}
+.chip.dashed{border-style:dashed;color:var(--muted)}
+.area-chip{min-height:40px;font-size:14px;font-weight:600}
+.area-chip .sq{width:12px;height:12px;border-radius:3px}
+.area-chip[aria-pressed="true"]{background:var(--t);border-color:var(--a);color:var(--ink)}
+.area-chip.todas[aria-pressed="true"]{background:var(--primary);border-color:var(--primary);color:var(--on-primary)}
+
+.rail{display:none;width:88px;flex-shrink:0;padding:20px 8px;background:var(--surface);border-right:1px solid var(--line);flex-direction:column;align-items:center;gap:22px;overflow-y:auto}
+.rail .logo{width:40px;height:40px;font-size:20px}
+.rail-import{display:flex;flex-direction:column;align-items:center;gap:6px;border:0;background:transparent;color:var(--ink);font-size:12px;font-weight:600}
+.rail-plus{width:52px;height:52px;border-radius:14px;background:var(--primary);color:var(--on-primary);display:flex;align-items:center;justify-content:center}
+.rail-plus svg.i{width:22px;height:22px}
+.raillist{width:100%;display:flex;flex-direction:column;gap:4px}
+.railitem{width:100%;min-height:60px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:8px 0;border:0;border-radius:12px;background:transparent;color:var(--ink);font-size:12px;font-weight:500}
+.railitem svg.i{width:22px;height:22px}
+.railitem[aria-current="page"]{background:var(--sel);font-weight:600}
+
+.main{flex:1;min-width:0;min-height:0;display:flex;flex-direction:column}
+.topbar{display:none;align-items:center;gap:4px;height:60px;flex-shrink:0;padding:0 10px 0 16px}
+.topbar .brand-name{flex:1;margin-left:8px;font-size:20px}
+.searchrow{display:none;flex-shrink:0;padding:0 16px 10px}
+.header{display:flex;align-items:center;flex-wrap:wrap;gap:12px;flex-shrink:0;padding:22px var(--px) 14px}
+.titles{flex:1;min-width:180px;display:flex;flex-direction:column;gap:2px}
+.titles h1{margin:0;font-family:var(--display);font-size:30px;font-weight:700;letter-spacing:-.02em;line-height:1.15}
+.titles p{margin:0;font-size:14px;color:var(--muted)}
+.search{position:relative;width:300px;height:44px;display:flex;align-items:center;gap:8px;padding:0 14px;border:1px solid var(--line-2);border-radius:10px;background:var(--surface);color:var(--muted)}
+.search:focus-within{border-color:var(--link)}
+.search svg.i{width:18px;height:18px}
+.search input{flex:1;min-width:0;border:0;outline:none;background:transparent;color:var(--ink);font-size:15px}
+.search.full{width:100%}
+.search.full input{font-size:16px}
+.sort{height:44px;display:flex;align-items:center;gap:6px;padding:0 6px 0 14px;border:1px solid var(--line-2);border-radius:10px;background:var(--surface);color:var(--muted);font-size:14px}
+.sort select{height:40px;border:0;background:transparent;color:var(--ink);font-size:15px;font-weight:600}
+.syncbtn .ok{color:var(--ok)}
+.chiprows{display:none;flex-direction:column;gap:8px;flex-shrink:0;padding-bottom:12px}
+.chiprow{display:flex;align-items:center;gap:8px;overflow-x:auto;padding:2px var(--px);scrollbar-width:none}
+.chiprow::-webkit-scrollbar{display:none}
+.chiprow-label{flex-shrink:0;margin-right:2px;font-size:13px;font-weight:600;color:var(--muted)}
+.filtros{display:flex;align-items:center;flex-wrap:wrap;gap:8px;flex-shrink:0;padding:0 var(--px) 14px}
+.aviso-wrap{flex-shrink:0;padding:0 var(--px) 16px}
+.aviso{display:flex;align-items:center;gap:12px;padding:12px 12px 12px 16px;border:1px solid var(--warn-line);border-radius:12px;background:var(--warn-bg);color:var(--warn-ink)}
+.aviso svg.i{color:var(--warn-icon)}
+.aviso p{flex:1;margin:0;font-size:14px}
+.content{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:32px;padding:4px var(--px) 40px}
+.secao,.group{display:flex;flex-direction:column;gap:12px}
+.sec-title,.group-head h2{margin:0;font-family:var(--display);font-size:18px;font-weight:700;letter-spacing:-.01em}
+.group-head{display:flex;align-items:center;gap:10px;min-height:36px}
+.recents{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.recent{min-width:0;display:flex;align-items:center;gap:14px;padding:14px 16px;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink);text-align:left}
+.recent .info{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.recent .name{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.recent .when{font-size:13px;color:var(--muted)}
+.play{width:40px;height:40px;flex-shrink:0;border-radius:20px;background:var(--chip);display:flex;align-items:center;justify-content:center}
+.play svg.i{width:16px;height:16px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(212px,1fr));gap:16px}
+.card{min-width:0;min-height:176px;display:grid;grid-template-columns:auto 1fr;grid-template-rows:auto auto 1fr;grid-template-areas:"tile badges" "info info" "tags tags";gap:12px;padding:16px;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink);text-align:left}
+.card,.recent{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+button.card:hover,button.recent:hover{border-color:var(--line-2)}
+.card .tile{grid-area:tile}
+.card .badges{grid-area:badges;justify-self:end;display:flex;align-items:center;gap:6px}
+.card .info{grid-area:info;min-width:0;display:flex;flex-direction:column;gap:4px}
+.card .name{font-size:16px;font-weight:600;line-height:1.25}
+.card .desc{font-size:13px;color:var(--muted)}
+.card .tags{grid-area:tags;align-self:end;display:flex;flex-wrap:wrap;gap:6px}
+.card.pending{opacity:.6}
+.tag{height:24px;display:inline-flex;align-items:center;padding:0 8px;border-radius:6px;background:var(--chip);color:var(--ink-2);font-size:12px;font-weight:500}
+.badge{height:24px;display:inline-flex;align-items:center;gap:4px;padding:0 8px;border-radius:12px;background:var(--chip);color:var(--ink-2);font-size:12px;font-weight:500;white-space:nowrap}
+.badge svg.i{width:14px;height:14px}
+.star{display:inline-flex;color:var(--star)}
+.tile{width:56px;height:56px;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;border-radius:6px;background:var(--t);color:var(--a);font-family:var(--display);font-size:24px;font-weight:700;letter-spacing:-.03em;line-height:1}
+.tile.md{width:48px;height:48px;font-size:20px}
+.tile.sm{width:34px;height:34px;border-radius:5px;font-size:15px}
+.empty{display:flex;flex-direction:column;align-items:center;gap:10px;padding:80px 16px;text-align:center}
+.empty-title{margin:0;font-family:var(--display);font-size:20px;font-weight:700}
+.empty p{max-width:42ch;margin:0;color:var(--muted)}
+.bottomnav{display:none;height:68px;flex-shrink:0;padding:0 4px;border-top:1px solid var(--line);background:var(--surface)}
+.bottomitem{flex:1 1 0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;border:0;background:transparent;color:var(--muted);font-size:12px;font-weight:500}
+.bottomitem svg.i{width:22px;height:22px}
+.bottomitem[aria-current="page"]{color:var(--ink);font-weight:700}
+
+/* App aberto */
+.runner{position:fixed;inset:0;z-index:10;display:flex;flex-direction:column;background:#15191F;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+.runbar{height:56px;flex-shrink:0;display:flex;align-items:center;gap:10px;padding:0 8px;background:#15191F;color:#FFFFFF}
+.runback{min-height:44px;display:flex;align-items:center;gap:4px;padding:0 12px 0 6px;border:0;border-radius:8px;background:transparent;color:#FFFFFF;font-size:15px;font-weight:500}
+.runsep{width:1px;height:24px;background:#3A414C}
+.runtitles{flex:1;min-width:0;display:flex;flex-direction:column}
+.runnome{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.runarea{font-size:12px;color:#B8BFCA}
+.icon-btn.on-dark{color:#FFFFFF}
+.runframe{flex:1;min-height:0;background:#FFFFFF}
+.runframe iframe{display:block;width:100%;height:100%;border:0;background:#FFFFFF}
+.menu-wrap{position:relative}
+.menu{position:absolute;top:48px;right:0;z-index:5;min-width:240px;display:flex;flex-direction:column;padding:6px;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink);box-shadow:0 12px 32px rgba(0,0,0,.2)}
+.menu button{min-height:44px;padding:0 12px;border:0;border-radius:8px;background:transparent;color:var(--ink);font-size:15px;text-align:left}
+.menu button:hover{background:var(--sel)}
+.menu .danger{color:var(--danger)}
+
+/* Primeira abertura */
+.setup{min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:24px}
+.setup-card{width:100%;max-width:470px;display:flex;flex-direction:column;gap:16px;padding:32px;border:1px solid var(--line);border-radius:16px;background:var(--surface)}
+.setup-card h1{margin:0;font-family:var(--display);font-size:30px;letter-spacing:-.02em}
+#setupCorpo{display:flex;flex-direction:column;align-items:flex-start;gap:14px}
+#setupCorpo p{margin:0}
+#setupCorpo .field{width:100%}
+
+/* Janelas */
+dialog.sheet{width:min(760px,calc(100vw - 32px));max-width:none;max-height:calc(100dvh - 32px);padding:0;border:0;border-radius:16px;background:var(--surface);color:var(--ink)}
+dialog.sheet.small{width:min(500px,calc(100vw - 32px))}
+dialog::backdrop{background:rgba(10,12,16,.5)}
+.sheet-form{display:flex;flex-direction:column;max-height:calc(100dvh - 32px)}
+.sheet-head{display:flex;align-items:center;gap:12px;flex-shrink:0;padding:12px 12px 12px 24px;border-bottom:1px solid var(--line)}
+.sheet-head h2{flex:1;margin:0;font-family:var(--display);font-size:22px;font-weight:700;letter-spacing:-.02em}
+.sheet-body{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:20px;padding:20px 24px}
+.sheet-foot{display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:10px;flex-shrink:0;padding:14px 24px;border-top:1px solid var(--line)}
+.field{display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:600}
+.field input{height:46px;padding:0 14px;border:1px solid var(--line-2);border-radius:10px;background:var(--surface);color:var(--ink);font-size:16px;font-weight:400}
+.field input:focus{outline:2px solid var(--link);outline-offset:0;border-color:transparent}
+.row{display:flex;align-items:flex-end;gap:16px}
+.row.wrap{flex-wrap:wrap;gap:10px}
+.row .grow-field{flex:1;min-width:0}
+.field.sym{width:120px}
+.field.sym input{font-family:var(--display);font-size:18px;font-weight:700}
+fieldset{min-width:0;display:flex;flex-direction:column;gap:10px;margin:0;padding:0;border:0}
+legend{margin-bottom:2px;padding:0;font-size:14px;font-weight:600}
+.hint{margin:0;font-size:13px;color:var(--muted)}
+.hint.pad{padding:0 4px}
+.pills{display:flex;flex-wrap:wrap;gap:8px}
+.pill{min-height:44px;display:inline-flex;align-items:center;gap:10px;padding:0 16px 0 12px;border:2px solid var(--line-2);border-radius:10px;background:var(--surface);color:var(--ink);font-size:15px;font-weight:500}
+.pill[aria-pressed="true"]{background:var(--t);border-color:var(--a);font-weight:600}
+.pill.dashed{border-style:dashed;color:var(--muted)}
+.pill svg.i{width:16px;height:16px}
+.fileblock{display:flex;flex-direction:column;gap:14px;padding:16px;border:1px solid var(--line);border-radius:12px;background:var(--surface-2)}
+.filepick{display:flex;align-items:center;flex-wrap:wrap;gap:12px}
+.filepick p{margin:0;font-size:14px;color:var(--muted)}
+.achados{display:flex;flex-direction:column;gap:10px;margin:0;padding:0;list-style:none}
+.achados li{display:flex;align-items:flex-start;gap:10px;font-size:14px}
+.achados li.ok svg.i{color:var(--ok)}
+.achados li.alerta svg.i{color:var(--warn-icon)}
+.check{min-height:44px;display:flex;align-items:center;gap:10px;font-size:14px;font-weight:500}
+.check input{width:20px;height:20px;margin:0;accent-color:var(--primary)}
+.preview-wrap .card{max-width:250px}
+.erro{margin:0;color:var(--danger);font-size:14px}
+.erro:empty{display:none}
+.swatches{display:flex;flex-wrap:wrap;gap:10px}
+.swatch{width:44px;height:44px;display:flex;align-items:center;justify-content:center;border:2px solid transparent;border-radius:10px;background:var(--t)}
+.swatch span{width:20px;height:20px;border-radius:5px;background:var(--a)}
+.swatch[aria-pressed="true"]{border-color:var(--a)}
+.lista{display:flex;flex-direction:column;gap:12px;margin:0;padding:0;list-style:none}
+.lista li{display:flex;flex-direction:column;gap:10px;padding:14px;border:1px solid var(--line);border-radius:12px}
+.pasta-info{display:flex;align-items:flex-start;gap:12px}
+.pasta-info p{margin:0}
+.ok-line{display:flex;align-items:center;gap:8px}
+.ok-line svg.i{color:var(--ok)}
+.toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom));z-index:50;max-width:calc(100vw - 32px);transform:translateX(-50%);padding:12px 18px;border-radius:12px;background:#15191F;color:#FFFFFF;font-size:14px;box-shadow:0 8px 24px rgba(0,0,0,.25)}
+
+/* Fold aberto e telas médias */
+@media (max-width:1099px){
+  :root{--px:24px}
+  .sidebar{display:none}
+  .rail{display:flex}
+  .chiprows{display:flex}
+  .syncbtn .rotulo,.filtros .f-tema{display:none}
+  .search{width:240px}
+}
+/* Fold fechado e celulares */
+@media (max-width:599px){
+  :root{--px:16px}
+  .rail,.header{display:none}
+  .topbar{display:flex}
+  .searchrow{display:block}
+  .bottomnav{display:flex}
+  .content{gap:22px;padding-bottom:24px}
+  .recents{gap:10px}
+  .recent{flex-direction:column;gap:8px;padding:12px 6px}
+  .recent .tile{width:52px;height:52px;font-size:22px}
+  .recent .info{width:100%;align-items:center}
+  .recent .name{max-width:100%;font-size:13px}
+  .recent .when,.recent .play,.see-all{display:none}
+  .grid{display:flex;flex-direction:column;gap:0;overflow:hidden;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+  .card{min-height:68px;grid-template-columns:46px minmax(0,1fr) auto;grid-template-rows:auto;grid-template-areas:"tile info badges";align-items:center;gap:12px;padding:10px 14px;border:0;border-top:1px solid var(--line);border-radius:0}
+  .card:first-child{border-top:0}
+  .card .tile{width:46px;height:46px;font-size:19px}
+  .card .tags,.card .badge .rotulo{display:none}
+  .card .badge{padding:0;background:transparent}
+  .card .name{font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .card .desc{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .runback-rotulo,.runsep,.btn-tela-cheia{display:none}
+  .toast{bottom:calc(84px + env(safe-area-inset-bottom))}
+  dialog.sheet,dialog.sheet.small{width:100vw;height:100dvh;max-height:100dvh;margin:0;border-radius:0}
+  .sheet-form{height:100%;max-height:100dvh}
+  .sheet-head{padding-top:calc(12px + env(safe-area-inset-top))}
+  .sheet-foot{padding-bottom:calc(14px + env(safe-area-inset-bottom))}
+  .sheet-body{padding:16px}
+  .preview-wrap .card{max-width:none;border:1px solid var(--line);border-radius:12px}
+}
+</style>
+<script src="nativo.js"></script>
+</head>
+<body>
+
+<section class="setup" id="setup" hidden>
+  <div class="setup-card">
+    <span class="logo lg" aria-hidden="true">L</span>
+    <h1>Lançador</h1>
+    <div id="setupCorpo"></div>
+  </div>
+</section>
+
+<div class="shell" id="biblioteca" hidden>
+  <nav class="sidebar" aria-label="Biblioteca">
+    <div class="brand"><span class="logo" aria-hidden="true">L</span><span class="brand-name">Lançador</span></div>
+    <button type="button" class="btn primary wide" data-action="importar"><span data-icon="mais"></span>Importar app</button>
+    <div class="navlist" id="navLib"></div>
+    <div class="navgroup">
+      <h2 class="navtitle">Áreas</h2>
+      <div class="navlist" id="navAreas"></div>
+      <button type="button" class="navitem muted" data-action="nova-area"><span data-icon="mais"></span>Nova área</button>
+    </div>
+    <div class="navgroup">
+      <h2 class="navtitle">Temas</h2>
+      <div class="chips wrap" id="navTemas"></div>
+    </div>
+  </nav>
+
+  <nav class="rail" aria-label="Biblioteca">
+    <span class="logo" aria-hidden="true">L</span>
+    <button type="button" class="rail-import" data-action="importar"><span class="rail-plus"><span data-icon="mais"></span></span>Importar</button>
+    <div class="raillist" id="railLib"></div>
+  </nav>
+
+  <main class="main">
+    <div class="topbar">
+      <span class="logo sm" aria-hidden="true">L</span>
+      <span class="brand-name">Lançador</span>
+      <button type="button" class="icon-btn round" data-action="buscar" aria-label="Buscar"><span data-icon="busca"></span></button>
+      <button type="button" class="icon-btn round primary" data-action="importar" aria-label="Importar app"><span data-icon="mais"></span></button>
+    </div>
+    <div class="searchrow" id="searchRow" hidden>
+      <label class="search full"><span data-icon="busca"></span><span class="sr">Buscar apps</span><input type="search" id="q2" placeholder="Nome ou tema" autocomplete="off"></label>
+    </div>
+
+    <header class="header">
+      <div class="titles"><h1 id="titulo">Todos os apps</h1><p id="subtitulo"></p></div>
+      <label class="search"><span data-icon="busca"></span><span class="sr">Buscar apps</span><input type="search" id="q" placeholder="Buscar por nome ou tema" autocomplete="off"></label>
+      <label class="sort">Ordenar
+        <select id="ordem"><option value="recentes">Recentes</option><option value="az">A a Z</option></select>
+      </label>
+      <button type="button" class="btn syncbtn" data-action="ajustes" aria-label="Pasta e ajustes"><span class="ok"><span data-icon="pasta"></span></span><span class="rotulo">Pasta sincronizada</span></button>
+    </header>
+
+    <div class="chiprows">
+      <div class="chiprow" id="chipAreas"></div>
+      <div class="chiprow" id="chipTemas"></div>
+    </div>
+    <div class="filtros" id="filtros" hidden></div>
+    <div class="aviso-wrap" id="aviso" hidden></div>
+    <div class="content" id="conteudo"></div>
+    <nav class="bottomnav" id="bottomNav" aria-label="Seções"></nav>
+  </main>
+</div>
+
+<section class="runner" id="runner" hidden aria-label="App aberto">
+  <div class="runbar">
+    <button type="button" class="runback" data-action="fechar-app" aria-label="Voltar para a biblioteca"><span data-icon="voltar"></span><span class="runback-rotulo">Biblioteca</span></button>
+    <span class="runsep" aria-hidden="true"></span>
+    <span id="runTile"></span>
+    <span class="runtitles"><span class="runnome" id="runNome"></span><span class="runarea" id="runArea"></span></span>
+    <button type="button" class="icon-btn on-dark" data-action="recarregar-app" aria-label="Recarregar app"><span data-icon="recarregar"></span></button>
+    <button type="button" class="icon-btn on-dark btn-tela-cheia" data-action="tela-cheia" aria-label="Tela cheia"><span data-icon="telaCheia"></span></button>
+    <div class="menu-wrap">
+      <button type="button" class="icon-btn on-dark" id="btnMenuApp" data-action="menu-app" aria-label="Opções do app" aria-haspopup="menu" aria-expanded="false"><span data-icon="opcoes"></span></button>
+      <div class="menu" id="menuApp" role="menu" hidden>
+        <button type="button" role="menuitem" data-action="editar-app">Editar informações</button>
+        <button type="button" role="menuitem" data-action="favoritar-app" id="miFav">Favoritar</button>
+        <button type="button" role="menuitem" data-action="apagar-dados-app">Apagar dados salvos</button>
+        <button type="button" role="menuitem" class="danger" data-action="remover-app">Remover da biblioteca</button>
+      </div>
+    </div>
+  </div>
+  <div class="runframe" id="runFrame"></div>
+</section>
+
+<dialog class="sheet" id="dlgApp" aria-labelledby="dlgAppTitulo">
+  <form class="sheet-form" id="formApp" novalidate>
+    <header class="sheet-head">
+      <h2 id="dlgAppTitulo">Importar app</h2>
+      <button type="button" class="icon-btn" data-action="fechar-dialogo" aria-label="Fechar"><span data-icon="x"></span></button>
+    </header>
+    <div class="sheet-body">
+      <section class="fileblock">
+        <div class="filepick">
+          <label class="btn"><span data-icon="arquivo"></span><span id="arquivoRotulo">Escolher arquivo .html</span><input type="file" id="arquivo" accept=".html,.htm,text/html" hidden></label>
+          <p id="arquivoNome"></p>
+        </div>
+        <ul class="achados" id="achados"></ul>
+        <label class="check" id="linhaOffline" hidden><input type="checkbox" id="offline" checked>Guardar uma cópia das bibliotecas para funcionar offline</label>
+      </section>
+      <div class="row">
+        <label class="field grow-field">Nome<input id="fNome" autocomplete="off"></label>
+        <label class="field sym">Símbolo<input id="fSimbolo" maxlength="2" autocomplete="off"></label>
+      </div>
+      <label class="field">Descrição<input id="fDesc" autocomplete="off" placeholder="Para que serve, em poucas palavras"></label>
+      <fieldset>
+        <legend>Área</legend>
+        <p class="hint">Cada app fica em uma área, como uma pasta.</p>
+        <div class="pills" id="fAreas"></div>
+      </fieldset>
+      <fieldset>
+        <legend>Temas</legend>
+        <p class="hint">Marque quantos quiser. Eles viram etiquetas para filtrar a biblioteca.</p>
+        <div class="chips wrap" id="fTemas" style="padding:0"></div>
+        <div class="row">
+          <label class="field" style="flex:1;min-width:0;max-width:320px">Novo tema<input id="fNovoTema" placeholder="Ex.: Física" autocomplete="off"></label>
+          <button type="button" class="btn" data-action="add-tema">Adicionar tema</button>
+        </div>
+      </fieldset>
+      <div>
+        <label class="check"><input type="checkbox" id="fFav">Mostrar nos favoritos</label>
+        <label class="check"><input type="checkbox" id="fCompat">Modo compatível (para vídeos incorporados, como YouTube)</label>
+      </div>
+      <section class="preview-wrap">
+        <p class="hint" style="margin-bottom:8px">Prévia na biblioteca</p>
+        <div id="previa"></div>
+      </section>
+      <p class="erro" id="formErro" role="alert"></p>
+    </div>
+    <footer class="sheet-foot">
+      <button type="button" class="btn danger-text" id="btnRemoverApp" data-action="remover-do-form" hidden>Remover app</button>
+      <span class="spacer"></span>
+      <button type="button" class="btn" data-action="fechar-dialogo">Cancelar</button>
+      <button type="submit" class="btn primary" id="btnSalvarApp">Adicionar à biblioteca</button>
+    </footer>
+  </form>
+</dialog>
+
+<dialog class="sheet small" id="dlgArea" aria-labelledby="dlgAreaTitulo">
+  <form class="sheet-form" id="formArea" novalidate>
+    <header class="sheet-head">
+      <h2 id="dlgAreaTitulo">Nova área</h2>
+      <button type="button" class="icon-btn" data-action="fechar-dialogo" aria-label="Fechar"><span data-icon="x"></span></button>
+    </header>
+    <div class="sheet-body">
+      <label class="field">Nome<input id="aNome" maxlength="40" autocomplete="off"></label>
+      <fieldset><legend>Cor</legend><div class="swatches" id="aCores"></div></fieldset>
+      <p class="erro" id="areaErro" role="alert"></p>
+    </div>
+    <footer class="sheet-foot">
+      <button type="button" class="btn danger-text" id="btnApagarArea" data-action="apagar-area" hidden>Apagar área</button>
+      <span class="spacer"></span>
+      <button type="button" class="btn" data-action="fechar-dialogo">Cancelar</button>
+      <button type="submit" class="btn primary">Salvar</button>
+    </footer>
+  </form>
+</dialog>
+
+<dialog class="sheet small" id="dlgAjustes" aria-labelledby="ajTitulo">
+  <div class="sheet-form">
+    <header class="sheet-head">
+      <h2 id="ajTitulo">Pasta e ajustes</h2>
+      <button type="button" class="icon-btn" data-action="fechar-dialogo" aria-label="Fechar"><span data-icon="x"></span></button>
+    </header>
+    <div class="sheet-body">
+      <div class="pasta-info">
+        <span class="ok"><span data-icon="pasta"></span></span>
+        <div><p class="strong" id="ajPasta"></p><p class="hint">Sincronizada pelo Syncthing. Apps, áreas e dados de cada app ficam nesta pasta.</p></div>
+      </div>
+      <div class="row wrap">
+        <button type="button" class="btn" data-action="reler"><span data-icon="recarregar"></span>Ler a pasta de novo</button>
+        <button type="button" class="btn" data-action="trocar-pasta">Trocar de pasta</button>
+      </div>
+      <div id="ajConflitos"></div>
+      <label class="field">Nome deste aparelho<input id="ajAparelho" maxlength="30" autocomplete="off"></label>
+      <p class="hint">Separa o histórico de “Recentes” de cada aparelho. Para editar um app, segure o dedo sobre ele ou clique com o botão direito.</p>
+      <p class="hint" id="ajVersao"></p>
+    </div>
+  </div>
+</dialog>
+
+<dialog class="sheet small" id="dlgConflitos" aria-labelledby="cfgTitulo">
+  <div class="sheet-form">
+    <header class="sheet-head">
+      <h2 id="cfgTitulo">Versões diferentes</h2>
+      <button type="button" class="icon-btn" data-action="fechar-dialogo" aria-label="Fechar"><span data-icon="x"></span></button>
+    </header>
+    <div class="sheet-body">
+      <p class="hint">Estes arquivos foram alterados em dois aparelhos antes de sincronizar. O Syncthing guardou as duas versões. Escolha qual fica.</p>
+      <ul class="lista" id="listaConflitos"></ul>
+    </div>
+  </div>
+</dialog>
+
+<dialog class="sheet small" id="dlgConfirmar" aria-labelledby="cfTitulo">
+  <form class="sheet-form" method="dialog">
+    <div class="sheet-body">
+      <h2 id="cfTitulo" style="margin:0;font-family:var(--display);font-size:20px"></h2>
+      <p id="cfTexto" style="margin:0;color:var(--muted)"></p>
+    </div>
+    <footer class="sheet-foot">
+      <button class="btn" value="cancelar">Cancelar</button>
+      <button class="btn primary" value="ok" id="cfOk">Confirmar</button>
+    </footer>
+  </form>
+</dialog>
+
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+<script>
+'use strict';
+
+const VERSAO = '1.0';
+const CONFLITO = /\.sync-conflict-[^.]*/;
+const SANDBOX = 'allow-scripts allow-forms allow-modals allow-popups allow-popups-to-escape-sandbox allow-downloads allow-pointer-lock';
+const PERMISSOES = 'fullscreen *; autoplay *; clipboard-write *; encrypted-media *; picture-in-picture *; microphone *; camera *';
+
+const CORES = [
+  { nome: 'Azul', fg: '#1F4FD1', bg: '#E4EBFC' },
+  { nome: 'Laranja', fg: '#B0450E', bg: '#FBE9DC' },
+  { nome: 'Verde-azulado', fg: '#0B6B5E', bg: '#DCF1EC' },
+  { nome: 'Roxo', fg: '#6A3DB3', bg: '#ECE5FA' },
+  { nome: 'Rosa', fg: '#B42A5C', bg: '#FBE4EC' },
+  { nome: 'Verde', fg: '#3F6B12', bg: '#E7F2DA' },
+  { nome: 'Mostarda', fg: '#8A5A00', bg: '#FBF0D6' },
+  { nome: 'Cinza', fg: '#45505E', bg: '#E7EAEE' }
+];
+const SEM_AREA = { id: '', nome: 'Sem área', cor: 7 };
+
+function configPadrao() {
+  return {
+    versao: 1,
+    areas: [
+      { id: 'faculdade', nome: 'Faculdade', cor: 0 },
+      { id: 'idiomas', nome: 'Idiomas', cor: 1 },
+      { id: 'ferramentas', nome: 'Ferramentas', cor: 2 },
+      { id: 'jogos', nome: 'Jogos', cor: 3 }
+    ],
+    temas: []
+  };
+}
+
+const svg = (corpo, extra = '') => `<svg class="i${extra}" viewBox="0 0 24 24" aria-hidden="true">${corpo}</svg>`;
+const I = {
+  mais: svg('<path d="M12 5v14M5 12h14"/>'),
+  grade: svg('<rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/>'),
+  relogio: svg('<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>'),
+  estrela: svg('<path d="M12 3.8l2.5 5.1 5.6.8-4.05 3.95.95 5.6L12 16.6l-5 2.65.95-5.6L3.9 9.7l5.6-.8z"/>'),
+  estrelaCheia: svg('<path d="M12 3.8l2.5 5.1 5.6.8-4.05 3.95.95 5.6L12 16.6l-5 2.65.95-5.6L3.9 9.7l5.6-.8z"/>', ' fill'),
+  busca: svg('<circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/>'),
+  x: svg('<path d="M6 6l12 12M18 6L6 18"/>'),
+  nuvem: svg('<path d="M7 18h10a4 4 0 0 0 .6-7.95A6 6 0 0 0 6.2 9.6 4.2 4.2 0 0 0 7 18z"/>'),
+  play: svg('<path d="M8 5.5v13l10-6.5z"/>', ' fill'),
+  pasta: svg('<path d="M3.5 7.5a2 2 0 0 1 2-2h4l2 2h7a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/><path d="M9 13.5l2 2 4-4"/>'),
+  alerta: svg('<path d="M12 4l9 16H3z"/><path d="M12 10v4M12 17.2v.1"/>'),
+  voltar: svg('<path d="M15 6l-6 6 6 6"/>'),
+  recarregar: svg('<path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3"/><path d="M19.5 4.5v4.5H15"/>'),
+  telaCheia: svg('<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>'),
+  opcoes: svg('<circle cx="12" cy="5.5" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="12" cy="18.5" r="1.8"/>', ' fill'),
+  lapis: svg('<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/>'),
+  arquivo: svg('<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/>'),
+  check: svg('<path d="M5 12.5l4.5 4.5L19 7.5"/>'),
+  banco: svg('<ellipse cx="12" cy="6" rx="7" ry="2.5"/><path d="M5 6v12c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5V6"/><path d="M5 12c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5"/>')
+};
+
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const plural = n => (n === 1 ? '1 app' : n + ' apps');
+const comparar = (a, b) => a.localeCompare(b, 'pt-BR', { sensitivity: 'base' });
+const espera = ms => new Promise(r => setTimeout(r, ms));
+
+/* ---------- Preferências deste aparelho ---------- */
+const prefs = {
+  get(k, d = null) { try { const v = localStorage.getItem('lancador.' + k); return v === null ? d : v; } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem('lancador.' + k, v); } catch (e) { /* sem armazenamento */ } }
+};
+
+function aparelho() {
+  let id = prefs.get('aparelhoId');
+  if (!id) {
+    id = (window.crypto && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(16).slice(2) + Date.now().toString(16)).replace(/[^a-z0-9]/gi, '').slice(0, 12);
+    prefs.set('aparelhoId', id);
+  }
+  let nome = prefs.get('aparelhoNome');
+  if (!nome) {
+    nome = /Android/i.test(navigator.userAgent) ? (Math.min(screen.width, screen.height) < 600 ? 'Celular' : 'Tablet') : 'PC';
+    prefs.set('aparelhoNome', nome);
+  }
+  return { id, nome };
+}
+
+const S = {
+  backend: null, handle: null, pastaNome: '',
+  config: null, apps: [], htmlPresente: new Set(), usos: {}, meuUso: {}, conflitos: [], erro: '',
+  view: 'todos', theme: '', query: '', sort: prefs.get('ordem', 'recentes'), searchOpen: false,
+  running: null
+};
+
+/* ---------- Guardar a pasta escolhida (PC) ---------- */
+function abrirIdb() {
+  return new Promise((res, rej) => {
+    const r = indexedDB.open('lancador', 1);
+    r.onupgradeneeded = () => r.result.createObjectStore('kv');
+    r.onsuccess = () => res(r.result);
+    r.onerror = () => rej(r.error);
+  });
+}
+async function kvGet(k) {
+  const db = await abrirIdb();
+  return new Promise((res, rej) => { const q = db.transaction('kv').objectStore('kv').get(k); q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); });
+}
+async function kvSet(k, v) {
+  const db = await abrirIdb();
+  return new Promise((res, rej) => { const tx = db.transaction('kv', 'readwrite'); tx.objectStore('kv').put(v, k); tx.oncomplete = () => res(); tx.onerror = () => rej(tx.error); });
+}
+
+/* ---------- Acesso à pasta ---------- */
+function naoEncontrado(e) {
+  if (!e) return false;
+  return e.name === 'NotFoundError' || e.code === 'NAO_ENCONTRADO' || /NAO_ENCONTRADO|not ?found|does not exist|no such file/i.test(String(e.message || e));
+}
+
+// PC: File System Access API (Chrome e Edge)
+class FsBackend {
+  constructor(raiz) { this.raiz = raiz; }
+  partes(caminho) { return String(caminho).split('/').filter(Boolean); }
+  async pasta(partes, criar) { let h = this.raiz; for (const p of partes) h = await h.getDirectoryHandle(p, { create: criar }); return h; }
+  async list(dir) {
+    try {
+      const h = await this.pasta(this.partes(dir), false);
+      const out = [];
+      for await (const [name, item] of h.entries()) out.push({ name, kind: item.kind });
+      return out;
+    } catch (e) { if (naoEncontrado(e)) return []; throw e; }
+  }
+  async readText(caminho) {
+    const p = this.partes(caminho); const nome = p.pop();
+    const d = await this.pasta(p, false);
+    const f = await (await d.getFileHandle(nome)).getFile();
+    return await f.text();
+  }
+  async writeText(caminho, texto) {
+    const p = this.partes(caminho); const nome = p.pop();
+    const d = await this.pasta(p, true);
+    const w = await (await d.getFileHandle(nome, { create: true })).createWritable();
+    await w.write(texto); await w.close();
+  }
+  async remove(caminho) {
+    const p = this.partes(caminho); const nome = p.pop();
+    const d = await this.pasta(p, false);
+    await d.removeEntry(nome);
+  }
+}
+
+// Android: ponte do APK (window.LancadorNativo, definida em nativo.js)
+class NativeBackend {
+  constructor(base) { this.base = String(base).replace(/^\/+|\/+$/g, ''); }
+  c(caminho) { return caminho ? this.base + '/' + caminho : this.base; }
+  async list(dir) {
+    try {
+      const r = await window.LancadorNativo.listar(this.c(dir));
+      return (r || []).map(x => ({ name: x.nome, kind: x.tipo === 'pasta' ? 'directory' : 'file' }));
+    } catch (e) { if (naoEncontrado(e)) return []; throw e; }
+  }
+  readText(caminho) { return window.LancadorNativo.lerTexto(this.c(caminho)); }
+  writeText(caminho, texto) { return window.LancadorNativo.escreverTexto(this.c(caminho), texto); }
+  remove(caminho) { return window.LancadorNativo.apagar(this.c(caminho)); }
+}
+
+async function lerJson(caminho, padrao) {
+  try { return JSON.parse(await S.backend.readText(caminho)); }
+  catch (e) { if (naoEncontrado(e) || e instanceof SyntaxError) return padrao; throw e; }
+}
+// Arquivos ocultos e temporários do Syncthing ficam de fora
+function visivel(nome) { return !nome.startsWith('.') && !nome.startsWith('~syncthing~') && !nome.endsWith('.tmp'); }
+
+function normalizarConfig(c) {
+  const areas = Array.isArray(c && c.areas) ? c.areas.filter(a => a && a.id && a.nome).map(a => ({ id: String(a.id), nome: String(a.nome), cor: Number.isInteger(a.cor) ? a.cor : 0 })) : [];
+  const temas = Array.isArray(c && c.temas) ? c.temas.filter(t => typeof t === 'string' && t.trim()).map(t => t.trim()) : [];
+  return { versao: 1, areas, temas };
+}
+function normalizarMeta(m) {
+  return Object.assign({}, m, {
+    id: String(m.id), nome: String(m.nome),
+    simbolo: String(m.simbolo || simboloDe(m.nome)).slice(0, 2),
+    descricao: m.descricao ? String(m.descricao) : '',
+    area: m.area ? String(m.area) : '',
+    temas: Array.isArray(m.temas) ? m.temas.map(String) : [],
+    favorito: !!m.favorito, usaInternet: !!m.usaInternet, compativel: !!m.compativel,
+    criadoEm: Number(m.criadoEm) || 0, atualizadoEm: Number(m.atualizadoEm) || 0
+  });
+}
+function dadosVazios() { return { v: 1, localStorage: {}, storage: {} }; }
+function normalizarDados(d) {
+  const r = dadosVazios();
+  if (d && typeof d === 'object') {
+    if (d.localStorage && typeof d.localStorage === 'object') r.localStorage = d.localStorage;
+    if (d.storage && typeof d.storage === 'object') r.storage = d.storage;
+  }
+  return r;
+}
+
+async function mudarConfig(fn) {
+  const atual = normalizarConfig((await lerJson('lancador.json', null)) || configPadrao());
+  fn(atual);
+  await S.backend.writeText('lancador.json', JSON.stringify(atual, null, 2));
+  S.config = atual;
+}
+async function salvarMeta(m) { await S.backend.writeText(`apps/${m.id}.json`, JSON.stringify(m, null, 2)); }
+
+/* ---------- Leitura da pasta ---------- */
+let carregando = null;
+function recarregar() {
+  if (!S.backend) return Promise.resolve();
+  if (carregando) return carregando;
+  carregando = (async () => {
+    try {
+      const [raiz, apps, dados, uso] = await Promise.all(['', 'apps', 'dados', 'uso'].map(d => S.backend.list(d)));
+      const arquivos = l => l.filter(x => x.kind === 'file' && visivel(x.name));
+      const conflitos = [];
+      [['', raiz], ['apps', apps], ['dados', dados], ['uso', uso]].forEach(([pasta, l]) => {
+        arquivos(l).forEach(x => { if (CONFLITO.test(x.name)) conflitos.push({ pasta, nome: x.name, original: x.name.replace(CONFLITO, '') }); });
+      });
+      S.config = normalizarConfig((await lerJson('lancador.json', null)) || configPadrao());
+      const nomes = arquivos(apps).map(x => x.name).filter(n => !CONFLITO.test(n));
+      S.htmlPresente = new Set(nomes.filter(n => n.endsWith('.html')).map(n => n.slice(0, -5)));
+      const metas = await Promise.all(nomes.filter(n => n.endsWith('.json')).map(n => lerJson('apps/' + n, null)));
+      S.apps = metas.filter(m => m && m.id && m.nome).map(normalizarMeta);
+      const usos = await Promise.all(arquivos(uso).filter(x => x.name.endsWith('.json') && !CONFLITO.test(x.name)).map(x => lerJson('uso/' + x.name, null)));
+      const mapa = {};
+      const juntar = r => { if (r && typeof r === 'object') Object.keys(r).forEach(k => { const t = Number(r[k]) || 0; if (!mapa[k] || t > mapa[k]) mapa[k] = t; }); };
+      usos.forEach(u => juntar(u && u.recentes));
+      juntar(S.meuUso);
+      S.usos = mapa;
+      S.conflitos = conflitos;
+      S.erro = '';
+    } catch (e) {
+      console.error(e);
+      if (e && e.name === 'NotAllowedError' && S.handle) { carregando = null; mostrarSetup('reconectar', S.handle); return; }
+      S.erro = 'Não foi possível ler a pasta. ' + (e && e.message ? e.message : '');
+    }
+    carregando = null;
+    renderTudo();
+  })();
+  return carregando;
+}
+
+/* ---------- Utilidades ---------- */
+function slug(t) {
+  return String(t).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'app';
+}
+function sufixo() { return Math.random().toString(36).slice(2, 6); }
+function novoId(nome) { let id; do { id = slug(nome) + '-' + sufixo(); } while (S.apps.some(m => m.id === id)); return id; }
+function simboloDe(nome) {
+  const p = String(nome || '').trim().split(/\s+/).filter(Boolean);
+  if (!p.length) return '?';
+  if (p.length === 1) return p[0].charAt(0).toUpperCase() + p[0].charAt(1).toLowerCase();
+  return p[0].charAt(0).toUpperCase() + p[1].charAt(0).toLowerCase();
+}
+function nomeDeArquivo(n) {
+  const t = String(n).replace(/\.html?$/i, '').replace(/[-_]+/g, ' ').trim();
+  return t.charAt(0).toUpperCase() + t.slice(1);
+}
+function quando(ts) {
+  const d = new Date(ts), hoje = new Date();
+  const dia = x => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  const n = Math.round((dia(hoje) - dia(d)) / 86400000);
+  if (n <= 0) return 'Aberto hoje';
+  if (n === 1) return 'Aberto ontem';
+  if (n < 7) return `Aberto há ${n} dias`;
+  return 'Aberto em ' + d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+}
+let toastTimer;
+function toast(msg) {
+  const t = $('#toast');
+  t.textContent = msg; t.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.hidden = true; }, 3800);
+}
+function confirmar(titulo, texto, rotuloOk) {
+  return new Promise(res => {
+    const d = $('#dlgConfirmar');
+    $('#cfTitulo').textContent = titulo;
+    $('#cfTexto').textContent = texto;
+    $('#cfOk').textContent = rotuloOk;
+    d.returnValue = '';
+    const aoFechar = () => { d.removeEventListener('close', aoFechar); res(d.returnValue === 'ok'); };
+    d.addEventListener('close', aoFechar);
+    d.showModal();
+  });
+}
+
+/* ---------- Biblioteca: filtros e grupos ---------- */
+function cor(area) { return CORES[((area && Number.isInteger(area.cor)) ? area.cor : 7) % CORES.length]; }
+function areaDe(m) { return S.config.areas.find(a => a.id === m.area) || null; }
+function areasVisiveis() { return S.config.areas.concat(S.apps.some(m => !areaDe(m)) ? [SEM_AREA] : []); }
+function noGrupo(m, a) { return a.id ? m.area === a.id : !areaDe(m); }
+function temasTodos() {
+  const set = new Set(S.config.temas);
+  S.apps.forEach(m => m.temas.forEach(t => set.add(t)));
+  return Array.from(set).sort(comparar);
+}
+function filtrar() {
+  const q = S.query.trim().toLowerCase();
+  const v = S.view;
+  return S.apps.filter(m => {
+    if (v === 'favoritos' && !m.favorito) return false;
+    if (v === 'recentes' && !S.usos[m.id]) return false;
+    if (v.startsWith('area:')) { const id = v.slice(5); if (id ? m.area !== id : !!areaDe(m)) return false; }
+    if (S.theme && !m.temas.includes(S.theme)) return false;
+    if (q) {
+      const a = areaDe(m);
+      const txt = [m.nome, m.descricao, m.temas.join(' '), a ? a.nome : ''].join(' ').toLowerCase();
+      if (!txt.includes(q)) return false;
+    }
+    return true;
+  });
+}
+function ordenar(lista) {
+  const r = lista.slice();
+  if (S.sort === 'az') r.sort((a, b) => comparar(a.nome, b.nome));
+  else r.sort((a, b) => (S.usos[b.id] || 0) - (S.usos[a.id] || 0) || (b.criadoEm - a.criadoEm) || comparar(a.nome, b.nome));
+  return r;
+}
+function tituloView() {
+  if (S.view === 'todos') return 'Todos os apps';
+  if (S.view === 'recentes') return 'Recentes';
+  if (S.view === 'favoritos') return 'Favoritos';
+  const id = S.view.slice(5);
+  if (!id) return SEM_AREA.nome;
+  const a = S.config.areas.find(x => x.id === id);
+  return a ? a.nome : 'Todos os apps';
+}
+
+/* ---------- Desenho da biblioteca ---------- */
+function tileHtml(m, area, classe = 'tile') {
+  const c = cor(area || SEM_AREA);
+  return `<span class="${classe}" style="--a:${c.fg};--t:${c.bg}" aria-hidden="true">${esc(m.simbolo || '?')}</span>`;
+}
+function cardHtml(m, previa = false) {
+  const a = areaDe(m) || SEM_AREA;
+  const sincronizando = !previa && !S.htmlPresente.has(m.id);
+  const badges = [];
+  if (sincronizando) badges.push('<span class="badge">Sincronizando</span>');
+  else {
+    if (m.usaInternet) badges.push(`<span class="badge" title="Usa internet">${I.nuvem}<span class="rotulo">Usa internet</span></span>`);
+    if (m.favorito) badges.push(`<span class="star" role="img" aria-label="Favorito">${I.estrelaCheia}</span>`);
+  }
+  const corpo = `${tileHtml(m, a)}
+    <span class="badges">${badges.join('')}</span>
+    <span class="info"><span class="name">${esc(m.nome)}</span>${m.descricao ? `<span class="desc">${esc(m.descricao)}</span>` : ''}</span>
+    <span class="tags">${m.temas.map(t => `<span class="tag">${esc(t)}</span>`).join('')}</span>`;
+  if (previa) return `<div class="card">${corpo}</div>`;
+  return `<button type="button" class="card${sincronizando ? ' pending' : ''}" data-action="abrir" data-id="${esc(m.id)}">${corpo}</button>`;
+}
+function recenteHtml(m) {
+  return `<button type="button" class="recent" data-action="abrir" data-id="${esc(m.id)}">${tileHtml(m, areaDe(m), 'tile md')}
+    <span class="info"><span class="name">${esc(m.nome)}</span><span class="when">${quando(S.usos[m.id])}</span></span>
+    <span class="play" aria-hidden="true">${I.play}</span></button>`;
+}
+
+function renderTudo() {
+  if (!S.config) return;
+  if (S.view.startsWith('area:')) {
+    const id = S.view.slice(5);
+    if (id && !S.config.areas.some(a => a.id === id)) S.view = 'todos';
+  }
+  renderNav(); renderCabecalho(); renderFiltros(); renderAviso(); renderConteudo();
+}
+
+function renderNav() {
+  const total = {
+    todos: S.apps.length,
+    recentes: S.apps.filter(m => S.usos[m.id]).length,
+    favoritos: S.apps.filter(m => m.favorito).length
+  };
+  const lib = [['todos', 'Todos os apps', 'Biblioteca', I.grade], ['recentes', 'Recentes', 'Recentes', I.relogio], ['favoritos', 'Favoritos', 'Favoritos', I.estrela]];
+  const atual = v => (S.view === v ? ' aria-current="page"' : '');
+  $('#navLib').innerHTML = lib.map(([v, rot, , ic]) => `<button type="button" class="navitem" data-action="view" data-view="${v}"${atual(v)}>${ic}<span class="grow">${rot}</span><span class="count">${total[v]}</span></button>`).join('');
+  $('#railLib').innerHTML = lib.map(([v, , curto, ic]) => `<button type="button" class="railitem" data-action="view" data-view="${v}"${atual(v)}>${ic}<span>${curto}</span></button>`).join('')
+    + `<button type="button" class="railitem" data-action="ajustes">${I.pasta}<span>Pasta</span></button>`;
+  const naBiblioteca = v => ((S.view === v || (v === 'todos' && S.view.startsWith('area:'))) ? ' aria-current="page"' : '');
+  $('#bottomNav').innerHTML = lib.map(([v, , curto, ic]) => `<button type="button" class="bottomitem" data-action="view" data-view="${v}"${naBiblioteca(v)}>${ic}<span>${curto}</span></button>`).join('')
+    + `<button type="button" class="bottomitem" data-action="ajustes">${I.pasta}<span>Pasta</span></button>`;
+
+  const areas = areasVisiveis();
+  $('#navAreas').innerHTML = areas.map(a => {
+    const c = cor(a); const v = 'area:' + a.id;
+    return `<button type="button" class="navitem" data-action="view" data-view="${esc(v)}"${atual(v)}><span class="sq" style="--a:${c.fg}" aria-hidden="true"></span><span class="grow">${esc(a.nome)}</span><span class="count">${S.apps.filter(m => noGrupo(m, a)).length}</span></button>`;
+  }).join('');
+
+  const temas = temasTodos();
+  const chipTema = t => `<button type="button" class="chip" data-action="tema" data-tema="${esc(t)}" aria-pressed="${S.theme === t}">${esc(t)}</button>`;
+  $('#navTemas').innerHTML = temas.length ? temas.map(chipTema).join('') : '<p class="hint pad">Os temas aparecem aqui quando você marcar algum num app.</p>';
+  $('#chipAreas').innerHTML = `<button type="button" class="chip area-chip todas" data-action="view" data-view="todos" aria-pressed="${S.view === 'todos'}">Todas</button>`
+    + areas.map(a => { const c = cor(a); const v = 'area:' + a.id; return `<button type="button" class="chip area-chip" style="--a:${c.fg};--t:${c.bg}" data-action="view" data-view="${esc(v)}" aria-pressed="${S.view === v}"><span class="sq" aria-hidden="true"></span>${esc(a.nome)}</button>`; }).join('')
+    + `<button type="button" class="chip dashed" data-action="nova-area">${I.mais}Nova área</button>`;
+  $('#chipTemas').hidden = !temas.length;
+  $('#chipTemas').innerHTML = temas.length ? '<span class="chiprow-label">Temas</span>' + temas.map(chipTema).join('') : '';
+}
+
+function renderCabecalho() {
+  $('#titulo').textContent = tituloView();
+  $('#subtitulo').textContent = plural(filtrar().length);
+}
+
+function renderFiltros() {
+  const el = $('#filtros');
+  const partes = [];
+  if (S.theme) partes.push(`<button type="button" class="chip solid f-tema" data-action="limpar-tema">Tema: ${esc(S.theme)}${I.x}</button>`);
+  if (S.query.trim()) partes.push(`<button type="button" class="chip" data-action="limpar-busca">Busca: “${esc(S.query.trim())}”${I.x}</button>`);
+  el.hidden = !partes.length;
+  el.innerHTML = partes.join('') + '<button type="button" class="linkbtn" data-action="limpar-filtros">Limpar filtros</button>';
+}
+
+function renderAviso() {
+  const el = $('#aviso');
+  if (S.erro) {
+    el.hidden = false;
+    el.innerHTML = `<div class="aviso" role="alert">${I.alerta}<p>${esc(S.erro)}</p><button type="button" class="btn" data-action="reler">Tentar de novo</button></div>`;
+    return;
+  }
+  const n = S.conflitos.length;
+  el.hidden = !n;
+  el.innerHTML = n ? `<div class="aviso" role="status">${I.alerta}<p>${n === 1 ? 'Um arquivo foi alterado' : n + ' arquivos foram alterados'} em dois aparelhos antes de sincronizar. Escolha qual versão manter.</p><button type="button" class="btn" data-action="conflitos">Resolver</button></div>` : '';
+}
+
+function renderConteudo() {
+  const el = $('#conteudo');
+  if (!S.apps.length) {
+    el.innerHTML = `<div class="empty"><p class="empty-title">Sua biblioteca está vazia</p><p>Importe um arquivo .html que você baixou do chat. Ele aparece aqui e nos outros aparelhos assim que a pasta sincronizar.</p><button type="button" class="btn primary" data-action="importar">${I.mais}Importar app</button></div>`;
+    return;
+  }
+  let html = '';
+  if (S.view === 'todos' && !S.theme && !S.query.trim()) {
+    const rec = S.apps.filter(m => S.usos[m.id]).sort((a, b) => S.usos[b.id] - S.usos[a.id]).slice(0, 3);
+    if (rec.length) html += `<section class="secao"><h2 class="sec-title">Continuar de onde parou</h2><div class="recents">${rec.map(recenteHtml).join('')}</div></section>`;
+  }
+  const lista = ordenar(filtrar());
+  const grupos = areasVisiveis().map(a => ({ a, apps: lista.filter(m => noGrupo(m, a)) })).filter(g => g.apps.length);
+  html += grupos.map(g => {
+    const c = cor(g.a); const v = 'area:' + g.a.id;
+    const botao = S.view === v
+      ? (g.a.id ? `<button type="button" class="linkbtn" data-action="editar-area" data-area="${esc(g.a.id)}">${I.lapis}Editar área</button>` : '')
+      : `<button type="button" class="linkbtn see-all" data-action="view" data-view="${esc(v)}">Ver só esta área</button>`;
+    return `<section class="group"><div class="group-head"><span class="sq" style="--a:${c.fg}" aria-hidden="true"></span><h2>${esc(g.a.nome)}</h2><span class="count">${plural(g.apps.length)}</span><span class="spacer"></span>${botao}</div><div class="grid">${g.apps.map(m => cardHtml(m)).join('')}</div></section>`;
+  }).join('');
+  if (!grupos.length) {
+    const vazioDaArea = S.view.startsWith('area:') && !S.theme && !S.query.trim();
+    html += vazioDaArea
+      ? `<div class="empty"><p class="empty-title">Nenhum app nesta área</p><p>Importe um app e escolha esta área, ou edite um app que já existe.</p><div class="row wrap" style="justify-content:center"><button type="button" class="btn primary" data-action="importar">${I.mais}Importar app</button><button type="button" class="btn" data-action="editar-area" data-area="${esc(S.view.slice(5))}">${I.lapis}Editar área</button></div></div>`
+      : '<div class="empty"><p class="empty-title">Nenhum app encontrado</p><p>Tente outro termo ou limpe os filtros para ver a biblioteca inteira.</p><button type="button" class="btn" data-action="limpar-filtros">Limpar filtros</button></div>';
+  }
+  el.innerHTML = html;
+}
+
+/* ---------- Primeira abertura e conexão com a pasta ---------- */
+function mostrarSetup(modo, extra) {
+  S.backend = null;
+  $('#biblioteca').hidden = true; $('#runner').hidden = true; $('#setup').hidden = false;
+  const c = $('#setupCorpo');
+  if (modo === 'escolher') {
+    c.innerHTML = `<p>Escolha a pasta que o Syncthing sincroniza entre o PC, o tablet e o celular. Os apps, as áreas e os dados de cada app ficam guardados nela.</p>
+      <button type="button" class="btn primary big" data-action="escolher-pasta">${I.pasta}Escolher pasta</button>
+      <p class="hint">Dica: crie uma pasta chamada Lancador e compartilhe no Syncthing com os três aparelhos.</p>`;
+  } else if (modo === 'reconectar') {
+    c.innerHTML = `<p>O navegador precisa da sua permissão para abrir a pasta <strong>${esc(extra.name)}</strong> de novo.</p>
+      <button type="button" class="btn primary big" data-action="reconectar">${I.pasta}Continuar com ${esc(extra.name)}</button>
+      <button type="button" class="linkbtn" data-action="escolher-pasta">Escolher outra pasta</button>`;
+  } else if (modo === 'nativo') {
+    c.innerHTML = `<p>Informe a pasta que o Syncthing sincroniza, a partir da memória interna do aparelho.</p>
+      <label class="field">Pasta<input id="caminhoNativo" value="${esc(extra || 'Lancador')}" autocomplete="off" spellcheck="false"></label>
+      <p class="hint">Exemplos: Lancador ou Syncthing/Lancador</p>
+      <button type="button" class="btn primary big" data-action="usar-caminho">${I.pasta}Usar esta pasta</button>
+      <p class="erro" id="setupErro" role="alert"></p>`;
+  } else {
+    c.innerHTML = `<p>Este navegador não consegue abrir uma pasta do aparelho.</p>
+      <p class="hint">No PC, abra o Lançador no Chrome ou no Edge. No tablet e no celular, use o APK.</p>`;
+  }
+}
+
+async function pastaPareceOutra(backend) {
+  try {
+    const l = (await backend.list('')).filter(x => visivel(x.name));
+    return l.length > 0 && !l.some(x => x.name === 'lancador.json');
+  } catch (e) { return false; }
+}
+
+async function conectar(backend, nome) {
+  S.backend = backend; S.pastaNome = nome;
+  try {
+    const cfg = await lerJson('lancador.json', null);
+    if (!cfg) await backend.writeText('lancador.json', JSON.stringify(configPadrao(), null, 2));
+    const meu = await lerJson(`uso/${aparelho().id}.json`, null);
+    S.meuUso = (meu && meu.recentes) || {};
+  } catch (e) {
+    console.error(e);
+    if (e && e.name === 'NotAllowedError' && S.handle) return mostrarSetup('reconectar', S.handle);
+    mostrarSetup(window.LancadorNativo ? 'nativo' : 'escolher', window.LancadorNativo ? nome : undefined);
+    toast('Não foi possível usar esta pasta. ' + (e && e.message ? e.message : ''));
+    return;
+  }
+  $('#setup').hidden = true;
+  $('#biblioteca').hidden = false;
+  await recarregar();
+}
+
+async function escolherPasta() {
+  let h;
+  try { h = await window.showDirectoryPicker({ id: 'lancador', mode: 'readwrite' }); }
+  catch (e) { if (e && e.name !== 'AbortError') toast('Não foi possível abrir a pasta.'); return; }
+  const b = new FsBackend(h);
+  if (await pastaPareceOutra(b) && !(await confirmar(`A pasta ${h.name} já tem outros arquivos`, 'Ela não parece ser do Lançador. Se continuar, o Lançador cria as pastas apps, dados e uso dentro dela.', 'Usar mesmo assim'))) return;
+  S.handle = h;
+  try { await kvSet('pasta', h); } catch (e) { /* segue sem lembrar */ }
+  await conectar(b, h.name);
+}
+
+async function reconectar() {
+  const h = S.handle;
+  if (!h) return mostrarSetup('escolher');
+  try { if ((await h.requestPermission({ mode: 'readwrite' })) === 'granted') await conectar(new FsBackend(h), h.name); }
+  catch (e) { toast('Não foi possível abrir a pasta.'); }
+}
+
+async function usarCaminhoNativo() {
+  const caminho = $('#caminhoNativo').value.trim().replace(/^\/+|\/+$/g, '');
+  const erro = $('#setupErro');
+  if (!caminho) { erro.textContent = 'Informe a pasta.'; return; }
+  const N = window.LancadorNativo;
+  try {
+    if (!(await N.temAcesso())) {
+      await N.pedirAcesso();
+      if (!(await N.temAcesso())) { erro.textContent = 'O Lançador precisa da permissão de acesso a todos os arquivos. Depois de permitir, toque de novo em Usar esta pasta.'; return; }
+    }
+    const b = new NativeBackend(caminho);
+    if (await pastaPareceOutra(b) && !(await confirmar(`A pasta ${caminho} já tem outros arquivos`, 'Ela não parece ser do Lançador. Se continuar, o Lançador cria as pastas apps, dados e uso dentro dela.', 'Usar mesmo assim'))) return;
+    prefs.set('caminhoNativo', caminho);
+    await conectar(b, caminho);
+  } catch (e) { erro.textContent = 'Não foi possível abrir a pasta. ' + (e && e.message ? e.message : e); }
+}
+
+/* ---------- Importar e editar app ---------- */
+let F = null;
+
+function analisarHtml(texto) {
+  const doc = new DOMParser().parseFromString(texto, 'text/html');
+  const remoto = u => /^(https?:)?\/\//i.test(u || '');
+  const fonte = u => /fonts\.(googleapis|gstatic)\.com/i.test(u);
+  const relativo = u => u && !remoto(u) && !/^(data:|blob:|#|javascript:|mailto:|about:)/i.test(u);
+  const scripts = $$('script[src]', doc).map(s => s.getAttribute('src'));
+  const estilos = $$('link[rel~="stylesheet"][href]', doc).map(l => l.getAttribute('href'));
+  const imagens = $$('img[src]', doc).map(i => i.getAttribute('src'));
+  const recursos = scripts.concat(estilos).filter(u => remoto(u) && !fonte(u));
+  const hosts = Array.from(new Set(recursos.map(u => { try { return new URL(u, 'https://localhost/').host; } catch (e) { return u; } })));
+  const usaIndexedDB = /\bindexedDB\b/.test(texto);
+  const temEmbed = /<iframe\b/i.test(texto);
+  return {
+    titulo: (doc.title || '').trim(),
+    recursos, hosts,
+    relativos: scripts.concat(estilos, imagens).filter(relativo),
+    usaDados: /\b(localStorage|sessionStorage)\b|window\.storage\b/.test(texto),
+    usaIndexedDB, temEmbed,
+    soClaude: /api\.anthropic\.com|window\.claude\b/.test(texto),
+    precisaCompat: usaIndexedDB || temEmbed || /document\.cookie/.test(texto)
+  };
+}
+
+// Baixa as bibliotecas da internet e coloca dentro do próprio HTML
+async function embutirRecursos(texto) {
+  const doc = new DOMParser().parseFromString(texto, 'text/html');
+  const remoto = u => /^(https?:)?\/\//i.test(u || '');
+  const fonte = u => /fonts\.(googleapis|gstatic)\.com/i.test(u);
+  const absoluta = u => new URL(u, 'https://localhost/').href;
+  const falhas = [];
+  for (const s of $$('script[src]', doc)) {
+    const src = s.getAttribute('src');
+    if (!remoto(src) || fonte(src)) continue;
+    if ((s.getAttribute('type') || '').toLowerCase() === 'module') { falhas.push(src); continue; }
+    try {
+      const r = await fetch(absoluta(src));
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const codigo = await r.text();
+      const novo = doc.createElement('script');
+      for (const at of Array.from(s.attributes)) if (!['src', 'integrity', 'crossorigin', 'async', 'defer', 'referrerpolicy'].includes(at.name)) novo.setAttribute(at.name, at.value);
+      novo.setAttribute('data-copia-de', src);
+      novo.textContent = codigo.replace(/<\/script/gi, '<\\/script');
+      s.replaceWith(novo);
+    } catch (e) { falhas.push(src); }
+  }
+  for (const l of $$('link[rel~="stylesheet"][href]', doc)) {
+    const href = l.getAttribute('href');
+    if (!remoto(href) || fonte(href)) continue;
+    try {
+      const url = absoluta(href);
+      const r = await fetch(url);
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const css = (await r.text()).replace(/url\(\s*(['"]?)(?!data:|https?:|#)([^'")]+)\1\s*\)/gi, (m0, q, u) => `url(${q}${new URL(u, url).href}${q})`);
+      const st = doc.createElement('style');
+      if (l.getAttribute('media')) st.setAttribute('media', l.getAttribute('media'));
+      st.setAttribute('data-copia-de', href);
+      st.textContent = css.replace(/<\/style/gi, '<\\/style');
+      l.replaceWith(st);
+    } catch (e) { falhas.push(href); }
+  }
+  const dt = /^\s*<!doctype[^>]*>/i.exec(texto);
+  return { html: (dt ? dt[0].trim() : '<!DOCTYPE html>') + '\n' + doc.documentElement.outerHTML, falhas };
+}
+
+function abrirFormApp(id) {
+  const m = id ? S.apps.find(x => x.id === id) : null;
+  if (id && !m) return;
+  const ultima = prefs.get('ultimaArea');
+  const daView = S.view.startsWith('area:') ? S.view.slice(5) : '';
+  const existe = a => !!a && S.config.areas.some(x => x.id === a);
+  F = {
+    modo: m ? 'editar' : 'novo', id: m ? m.id : null, html: null, analise: null,
+    area: m ? m.area : (existe(daView) ? daView : (existe(ultima) ? ultima : (S.config.areas[0] ? S.config.areas[0].id : ''))),
+    temas: new Set(m ? m.temas : (S.theme ? [S.theme] : [])), extras: [], simboloManual: !!m
+  };
+  $('#dlgAppTitulo').textContent = m ? 'Editar app' : 'Importar app';
+  $('#btnSalvarApp').textContent = m ? 'Salvar alterações' : 'Adicionar à biblioteca';
+  $('#arquivoRotulo').textContent = m ? 'Trocar por uma versão nova' : 'Escolher arquivo .html';
+  $('#arquivoNome').textContent = m ? 'Os dados salvos pelo app continuam como estão.' : 'Nenhum arquivo escolhido.';
+  $('#arquivo').value = '';
+  $('#achados').innerHTML = '';
+  $('#linhaOffline').hidden = true;
+  $('#offline').checked = true;
+  $('#fNome').value = m ? m.nome : '';
+  $('#fSimbolo').value = m ? m.simbolo : '';
+  $('#fDesc').value = m ? m.descricao : '';
+  $('#fNovoTema').value = '';
+  $('#fFav').checked = m ? m.favorito : false;
+  $('#fCompat').checked = m ? m.compativel : false;
+  $('#formErro').textContent = '';
+  $('#btnRemoverApp').hidden = !m;
+  renderFormAreas(); renderFormTemas(); renderPreview();
+  $('#dlgApp').showModal();
+  $('#dlgApp .sheet-body').scrollTop = 0;
+}
+
+async function aoEscolherArquivo() {
+  const f = $('#arquivo').files[0];
+  if (!f || !F) return;
+  let texto;
+  try { texto = await f.text(); } catch (e) { $('#formErro').textContent = 'Não foi possível ler o arquivo.'; return; }
+  F.html = texto;
+  F.analise = analisarHtml(texto);
+  $('#arquivoNome').textContent = f.name;
+  if (!$('#fNome').value.trim()) $('#fNome').value = F.analise.titulo || nomeDeArquivo(f.name);
+  if (!F.simboloManual) $('#fSimbolo').value = simboloDe($('#fNome').value);
+  if (F.analise.precisaCompat) $('#fCompat').checked = true;
+  $('#formErro').textContent = '';
+  renderAchados(); renderPreview();
+}
+
+function renderAchados() {
+  const a = F && F.analise;
+  if (!a) return;
+  const itens = [];
+  if (a.titulo) itens.push(['ok', I.check, `Título da página: ${esc(a.titulo)}.`]);
+  if (a.usaDados) itens.push(['ok', I.banco, 'O app salva dados. Ele terá um espaço só dele, guardado na pasta e sincronizado.']);
+  if (a.usaIndexedDB) itens.push(['alerta', I.alerta, 'Parte dos dados usa um formato que fica só neste aparelho e não sincroniza.']);
+  if (a.recursos.length) itens.push(['alerta', I.nuvem, `Carrega ${a.recursos.length === 1 ? '1 biblioteca' : a.recursos.length + ' bibliotecas'} da internet (${esc(a.hosts.join(', '))}).`]);
+  if (a.temEmbed) itens.push(['ok', I.check, 'Tem vídeo ou página incorporada, por isso o modo compatível foi ligado.']);
+  if (a.relativos.length) itens.push(['alerta', I.alerta, `Usa arquivos que ficam ao lado dele (${esc(a.relativos.slice(0, 3).join(', '))}). Eles não vêm junto; o ideal é tudo num único .html.`]);
+  if (a.soClaude) itens.push(['alerta', I.alerta, 'Usa recursos que só existem dentro do Claude. Essa parte não vai funcionar aqui.']);
+  if (!itens.length) itens.push(['ok', I.check, 'Arquivo pronto para funcionar offline.']);
+  $('#achados').innerHTML = itens.map(([t, ic, txt]) => `<li class="${t}">${ic}<span>${txt}</span></li>`).join('');
+  $('#linhaOffline').hidden = !a.recursos.length;
+}
+
+function renderFormAreas() {
+  $('#fAreas').innerHTML = S.config.areas.map(a => {
+    const c = cor(a);
+    return `<button type="button" class="pill" style="--a:${c.fg};--t:${c.bg}" data-action="form-area" data-area="${esc(a.id)}" aria-pressed="${F.area === a.id}"><span class="sq" aria-hidden="true"></span>${esc(a.nome)}</button>`;
+  }).join('') + `<button type="button" class="pill dashed" data-action="nova-area" data-origem="form">${I.mais}Nova área</button>`;
+}
+function renderFormTemas() {
+  const lista = Array.from(new Set(temasTodos().concat(F.extras))).sort(comparar);
+  $('#fTemas').innerHTML = lista.length
+    ? lista.map(t => `<button type="button" class="chip" data-action="form-tema" data-tema="${esc(t)}" aria-pressed="${F.temas.has(t)}">${F.temas.has(t) ? I.check : ''}${esc(t)}</button>`).join('')
+    : '<p class="hint">Nenhum tema ainda. Crie o primeiro abaixo.</p>';
+}
+function adicionarTemaForm() {
+  const t = $('#fNovoTema').value.trim().replace(/\s+/g, ' ');
+  if (!t || !F) return;
+  const existente = temasTodos().concat(F.extras).find(x => comparar(x, t) === 0);
+  const nome = existente || t;
+  if (!existente) F.extras.push(nome);
+  F.temas.add(nome);
+  $('#fNovoTema').value = '';
+  renderFormTemas(); renderPreview();
+}
+function renderPreview() {
+  if (!F) return;
+  const antigo = F.id ? S.apps.find(x => x.id === F.id) : null;
+  const nome = $('#fNome').value.trim() || 'Sem nome';
+  const usaInternet = F.analise ? (F.analise.recursos.length > 0 && !$('#offline').checked) : !!(antigo && antigo.usaInternet);
+  const m = { id: 'previa', nome, simbolo: $('#fSimbolo').value.trim() || simboloDe(nome), descricao: $('#fDesc').value.trim(), area: F.area, temas: Array.from(F.temas), favorito: $('#fFav').checked, usaInternet };
+  $('#previa').innerHTML = cardHtml(m, true);
+}
+
+async function salvarFormApp(e) {
+  e.preventDefault();
+  if (!F) return;
+  const erro = msg => { $('#formErro').textContent = msg; };
+  const nome = $('#fNome').value.trim().replace(/\s+/g, ' ');
+  if (F.modo === 'novo' && !F.html) return erro('Escolha o arquivo .html do app.');
+  if (!nome) return erro('Dê um nome ao app.');
+  if (S.config.areas.length && !S.config.areas.some(a => a.id === F.area)) return erro('Escolha uma área.');
+  const btn = $('#btnSalvarApp');
+  const rotulo = btn.textContent;
+  btn.disabled = true; erro('');
+  const form = F;
+  try {
+    const antigo = form.id ? S.apps.find(x => x.id === form.id) : null;
+    const id = antigo ? antigo.id : novoId(nome);
+    let usaInternet = antigo ? antigo.usaInternet : false;
+    if (form.html) {
+      let html = form.html;
+      let restantes = form.analise.recursos.length;
+      if (restantes && $('#offline').checked) {
+        btn.textContent = 'Copiando bibliotecas…';
+        const r = await embutirRecursos(html);
+        html = r.html; restantes = r.falhas.length;
+        if (r.falhas.length) toast(`Não deu para copiar ${r.falhas.length === 1 ? '1 biblioteca' : r.falhas.length + ' bibliotecas'}. O app vai buscar na internet.`);
+      }
+      usaInternet = restantes > 0;
+      await S.backend.writeText(`apps/${id}.html`, html);
+    }
+    const meta = Object.assign({}, antigo || {}, {
+      id, nome,
+      simbolo: ($('#fSimbolo').value.trim() || simboloDe(nome)).slice(0, 2),
+      descricao: $('#fDesc').value.trim(),
+      area: form.area,
+      temas: Array.from(form.temas),
+      favorito: $('#fFav').checked,
+      usaInternet,
+      compativel: $('#fCompat').checked,
+      criadoEm: antigo ? antigo.criadoEm : Date.now(),
+      atualizadoEm: Date.now()
+    });
+    await salvarMeta(meta);
+    if (form.area) prefs.set('ultimaArea', form.area);
+    $('#dlgApp').close();
+    await recarregar();
+    if (S.running && S.running.id === id) {
+      atualizarBarraApp();
+      if (form.html) { S.running.html = await S.backend.readText(`apps/${id}.html`); montarFrame(); }
+    }
+    toast(antigo ? 'Alterações salvas.' : `${nome} foi adicionado à biblioteca.`);
+  } catch (err) {
+    console.error(err);
+    erro('Não foi possível salvar na pasta. ' + (err && err.message ? err.message : ''));
+  } finally {
+    btn.disabled = false; btn.textContent = rotulo;
+  }
+}
+
+async function removerApp(id) {
+  const m = S.apps.find(x => x.id === id);
+  if (!m) return;
+  if (!(await confirmar(`Remover ${m.nome} da biblioteca?`, 'O app e os dados salvos por ele saem da pasta e somem dos outros aparelhos depois da sincronização.', 'Remover'))) return;
+  if (S.running && S.running.id === id) { S.running.sujo = false; clearTimeout(S.running.timer); pedirFecharApp(); }
+  for (const p of [`apps/${id}.html`, `apps/${id}.json`, `dados/${id}.json`]) {
+    try { await S.backend.remove(p); } catch (e) { if (!naoEncontrado(e)) console.warn(e); }
+  }
+  await recarregar();
+  toast(`${m.nome} foi removido.`);
+}
+
+/* ---------- Áreas ---------- */
+let FA = null;
+function proximaCor() {
+  const usadas = S.config.areas.map(a => a.cor);
+  for (let i = 0; i < CORES.length - 1; i++) if (!usadas.includes(i)) return i;
+  return S.config.areas.length % CORES.length;
+}
+function abrirFormArea(id, origem) {
+  const a = id ? S.config.areas.find(x => x.id === id) : null;
+  FA = { id: a ? a.id : null, cor: a ? a.cor : proximaCor(), origem: origem || '' };
+  $('#dlgAreaTitulo').textContent = a ? 'Editar área' : 'Nova área';
+  $('#aNome').value = a ? a.nome : '';
+  $('#areaErro').textContent = '';
+  $('#btnApagarArea').hidden = !a;
+  renderCores();
+  $('#dlgArea').showModal();
+}
+function renderCores() {
+  $('#aCores').innerHTML = CORES.map((c, i) => `<button type="button" class="swatch" style="--a:${c.fg};--t:${c.bg}" data-action="cor-area" data-cor="${i}" aria-pressed="${FA.cor === i}" aria-label="${c.nome}"><span></span></button>`).join('');
+}
+async function salvarFormArea(e) {
+  e.preventDefault();
+  if (!FA) return;
+  const nome = $('#aNome').value.trim().replace(/\s+/g, ' ');
+  if (!nome) { $('#areaErro').textContent = 'Dê um nome à área.'; return; }
+  if (S.config.areas.some(a => a.id !== FA.id && comparar(a.nome, nome) === 0)) { $('#areaErro').textContent = 'Já existe uma área com esse nome.'; return; }
+  const ctx = FA;
+  let idFinal = ctx.id;
+  try {
+    await mudarConfig(cfg => {
+      const existente = ctx.id ? cfg.areas.find(x => x.id === ctx.id) : null;
+      if (existente) { existente.nome = nome; existente.cor = ctx.cor; return; }
+      if (ctx.id) { cfg.areas.push({ id: ctx.id, nome, cor: ctx.cor }); return; }
+      let id = slug(nome);
+      while (cfg.areas.some(a => a.id === id)) id = slug(nome) + '-' + sufixo();
+      idFinal = id;
+      cfg.areas.push({ id, nome, cor: ctx.cor });
+    });
+  } catch (err) { console.error(err); $('#areaErro').textContent = 'Não foi possível salvar na pasta.'; return; }
+  $('#dlgArea').close();
+  if (ctx.origem === 'form' && F && $('#dlgApp').open) { F.area = idFinal; renderFormAreas(); renderPreview(); }
+  renderTudo();
+  toast(ctx.id ? 'Área atualizada.' : `Área ${nome} criada.`);
+}
+async function apagarArea() {
+  if (!FA || !FA.id) return;
+  const id = FA.id;
+  const n = S.apps.filter(m => m.area === id).length;
+  if (n) { $('#areaErro').textContent = `Mova ${n === 1 ? 'o app' : 'os ' + n + ' apps'} desta área para outra antes de apagar.`; return; }
+  const a = S.config.areas.find(x => x.id === id);
+  $('#dlgArea').close();
+  if (!(await confirmar(`Apagar a área ${a ? a.nome : ''}?`, 'Ela some da biblioteca em todos os aparelhos.', 'Apagar área'))) return;
+  try { await mudarConfig(cfg => { cfg.areas = cfg.areas.filter(x => x.id !== id); }); }
+  catch (e) { toast('Não foi possível salvar na pasta.'); return; }
+  if (S.view === 'area:' + id) S.view = 'todos';
+  renderTudo();
+  toast('Área apagada.');
+}
+
+/* ---------- Rodar um app ---------- */
+// Roda dentro do app: troca o armazenamento do navegador por um espaço só do app,
+// e manda cada mudança para o Lançador gravar na pasta.
+function shimDoApp(init) {
+  var local = init.local, kv = init.storage, pendente = false;
+  function enviar() {
+    if (pendente) return;
+    pendente = true;
+    Promise.resolve().then(function () {
+      pendente = false;
+      parent.postMessage({ lancador: 'dados', app: init.app, dados: { v: 1, localStorage: local, storage: kv } }, '*');
+    });
+  }
+  function tem(o, k) { return Object.prototype.hasOwnProperty.call(o, k); }
+  function criarStorage(dados, aoMudar) {
+    var api = {
+      getItem: function (k) { k = String(k); return tem(dados, k) ? dados[k] : null; },
+      setItem: function (k, v) { dados[String(k)] = String(v); aoMudar(); },
+      removeItem: function (k) { k = String(k); if (tem(dados, k)) { delete dados[k]; aoMudar(); } },
+      clear: function () { Object.keys(dados).forEach(function (k) { delete dados[k]; }); aoMudar(); },
+      key: function (i) { var ks = Object.keys(dados); return i >= 0 && i < ks.length ? ks[i] : null; }
+    };
+    Object.defineProperty(api, 'length', { get: function () { return Object.keys(dados).length; }, configurable: true });
+    return new Proxy(api, {
+      get: function (t, p) { if (p in t) return t[p]; if (typeof p === 'string' && tem(dados, p)) return dados[p]; return undefined; },
+      set: function (t, p, v) { if (typeof p === 'string' && !(p in t)) t.setItem(p, v); return true; },
+      deleteProperty: function (t, p) { if (typeof p === 'string') t.removeItem(p); return true; },
+      has: function (t, p) { return (p in t) || (typeof p === 'string' && tem(dados, p)); },
+      ownKeys: function () { return Object.keys(dados); },
+      getOwnPropertyDescriptor: function (t, p) {
+        if (typeof p === 'string' && tem(dados, p)) return { value: dados[p], writable: true, enumerable: true, configurable: true };
+        return undefined;
+      }
+    });
+  }
+  function definir(nome, valor) { try { Object.defineProperty(window, nome, { value: valor, configurable: true, enumerable: true, writable: false }); } catch (e) { /* mantém o original */ } }
+  definir('localStorage', criarStorage(local, enviar));
+  definir('sessionStorage', criarStorage({}, function () {}));
+  // Mesmo formato do armazenamento dos artefatos do claude.ai (window.storage)
+  var api = {
+    get: function (key, shared) { return Promise.resolve().then(function () { if (!tem(kv, key)) throw new Error('Chave não encontrada: ' + key); return { key: key, value: kv[key], shared: !!shared }; }); },
+    set: function (key, value, shared) { return Promise.resolve().then(function () { kv[String(key)] = value; enviar(); return { key: key, value: value, shared: !!shared }; }); },
+    delete: function (key, shared) { return Promise.resolve().then(function () { var havia = tem(kv, key); delete kv[key]; enviar(); return { key: key, deleted: havia, shared: !!shared }; }); },
+    list: function (prefix, shared) { return Promise.resolve().then(function () { return { keys: Object.keys(kv).filter(function (k) { return !prefix || k.indexOf(prefix) === 0; }), prefix: prefix, shared: !!shared }; }); }
+  };
+  if (typeof window.storage === 'undefined') definir('storage', api);
+}
+
+function shimScript(id, dados) {
+  const init = JSON.stringify({ app: id, local: dados.localStorage, storage: dados.storage })
+    .replace(/</g, '\\u003c').replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029');
+  return '<script>(' + shimDoApp.toString() + ')(' + init + ');</scr' + 'ipt>';
+}
+function injetarShim(html, shim) {
+  const head = /<head\b[^>]*>/i.exec(html);
+  if (head) { const i = head.index + head[0].length; return html.slice(0, i) + shim + html.slice(i); }
+  const tag = /<html\b[^>]*>/i.exec(html);
+  if (tag) { const i = tag.index + tag[0].length; return html.slice(0, i) + '<head>' + shim + '</head>' + html.slice(i); }
+  const dt = /^\s*<!doctype[^>]*>/i.exec(html);
+  if (dt) return html.slice(0, dt[0].length) + shim + html.slice(dt[0].length);
+  return shim + html;
+}
+
+async function abrirApp(id) {
+  if (S.running) return;
+  const m = S.apps.find(x => x.id === id);
+  if (!m) return;
+  if (!S.htmlPresente.has(id)) { toast('Este app ainda está sincronizando. Tente de novo em instantes.'); return; }
+  let html;
+  try { html = await S.backend.readText(`apps/${id}.html`); }
+  catch (e) { toast('Não foi possível abrir o arquivo do app.'); return; }
+  let dados;
+  try { dados = normalizarDados(await lerJson(`dados/${id}.json`, null)); }
+  catch (e) { dados = dadosVazios(); }
+  S.running = { id, html, dados, sujo: false, timer: null, frame: null };
+  montarFrame();
+  atualizarBarraApp();
+  $('#runner').hidden = false;
+  $('#biblioteca').hidden = true;
+  history.pushState({ lancador: 'app' }, '');
+  registrarUso(id);
+}
+
+function montarFrame() {
+  const r = S.running;
+  if (!r) return;
+  const m = S.apps.find(x => x.id === r.id);
+  const f = document.createElement('iframe');
+  f.setAttribute('sandbox', SANDBOX + (m && m.compativel ? ' allow-same-origin' : ''));
+  f.setAttribute('allow', PERMISSOES);
+  f.setAttribute('allowfullscreen', '');
+  f.title = m ? m.nome : 'App';
+  f.srcdoc = injetarShim(r.html, shimScript(r.id, r.dados));
+  $('#runFrame').replaceChildren(f);
+  r.frame = f;
+}
+
+function atualizarBarraApp() {
+  const r = S.running;
+  if (!r) return;
+  const m = S.apps.find(x => x.id === r.id) || { nome: 'App', simbolo: '?', area: '', favorito: false };
+  const a = areaDe(m) || SEM_AREA;
+  $('#runTile').innerHTML = tileHtml(m, a, 'tile sm');
+  $('#runNome').textContent = m.nome;
+  $('#runArea').textContent = a.nome;
+  $('#miFav').textContent = m.favorito ? 'Tirar dos favoritos' : 'Favoritar';
+}
+
+function aoReceberMensagem(e) {
+  const r = S.running;
+  if (!r || !r.frame || e.source !== r.frame.contentWindow) return;
+  const d = e.data;
+  if (!d || d.lancador !== 'dados' || d.app !== r.id || !d.dados) return;
+  r.dados = normalizarDados(d.dados);
+  r.sujo = true;
+  clearTimeout(r.timer);
+  r.timer = setTimeout(() => salvarDados(r), 500);
+}
+async function salvarDados(r) {
+  if (!r || !r.sujo || !S.backend) return;
+  r.sujo = false;
+  clearTimeout(r.timer);
+  try { await S.backend.writeText(`dados/${r.id}.json`, JSON.stringify(r.dados)); }
+  catch (e) { r.sujo = true; console.error(e); toast('Não foi possível salvar os dados do app na pasta.'); }
+}
+
+async function registrarUso(id) {
+  S.meuUso[id] = Date.now();
+  S.usos[id] = S.meuUso[id];
+  S.meuUso = Object.fromEntries(Object.entries(S.meuUso).sort((a, b) => b[1] - a[1]).slice(0, 60));
+  const ap = aparelho();
+  try { await S.backend.writeText(`uso/${ap.id}.json`, JSON.stringify({ aparelho: ap.nome, recentes: S.meuUso }, null, 2)); }
+  catch (e) { console.warn(e); }
+}
+
+function pedirFecharApp() {
+  if (history.state && history.state.lancador === 'app') history.back();
+  else fecharAppInterno();
+}
+async function fecharAppInterno() {
+  const r = S.running;
+  if (!r) return;
+  fecharMenu();
+  $$('dialog[open]').forEach(d => d.close());
+  if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(() => {});
+  S.running = null;
+  $('#runFrame').replaceChildren();
+  $('#runner').hidden = true;
+  $('#biblioteca').hidden = false;
+  renderTudo();
+  await salvarDados(r);
+  recarregar();
+}
+async function recarregarApp() {
+  const r = S.running;
+  if (!r) return;
+  await salvarDados(r);
+  montarFrame();
+}
+function telaCheia() {
+  const el = $('#runner');
+  if (document.fullscreenElement) { document.exitFullscreen().catch(() => {}); return; }
+  if (el.requestFullscreen) el.requestFullscreen().catch(() => toast('Tela cheia não está disponível aqui.'));
+  else toast('Tela cheia não está disponível aqui.');
+}
+function alternarMenu() {
+  const m = $('#menuApp');
+  const abrir = m.hidden;
+  m.hidden = !abrir;
+  $('#btnMenuApp').setAttribute('aria-expanded', String(abrir));
+  if (abrir) { const b = m.querySelector('button'); if (b) b.focus(); }
+}
+function fecharMenu() {
+  const m = $('#menuApp');
+  if (m.hidden) return;
+  m.hidden = true;
+  $('#btnMenuApp').setAttribute('aria-expanded', 'false');
+}
+async function alternarFavorito() {
+  const r = S.running;
+  const m = r && S.apps.find(x => x.id === r.id);
+  if (!m) return;
+  m.favorito = !m.favorito;
+  m.atualizadoEm = Date.now();
+  try { await salvarMeta(m); } catch (e) { m.favorito = !m.favorito; toast('Não foi possível salvar na pasta.'); return; }
+  atualizarBarraApp();
+  toast(m.favorito ? 'Adicionado aos favoritos.' : 'Removido dos favoritos.');
+}
+async function apagarDadosApp() {
+  const r = S.running;
+  if (!r) return;
+  const m = S.apps.find(x => x.id === r.id);
+  if (!(await confirmar(`Apagar os dados salvos de ${m ? m.nome : 'este app'}?`, 'O app volta a abrir como novo, em todos os aparelhos.', 'Apagar dados'))) return;
+  if (S.running !== r) return;
+  clearTimeout(r.timer);
+  r.sujo = false;
+  r.dados = dadosVazios();
+  try { await S.backend.remove(`dados/${r.id}.json`); } catch (e) { if (!naoEncontrado(e)) { toast('Não foi possível apagar na pasta.'); return; } }
+  montarFrame();
+  toast('Dados apagados.');
+}
+
+/* ---------- Ajustes e conflitos ---------- */
+function abrirAjustes() {
+  $('#ajPasta').textContent = S.pastaNome || '';
+  $('#ajAparelho').value = aparelho().nome;
+  $('#ajVersao').textContent = 'Lançador ' + VERSAO;
+  const n = S.conflitos.length;
+  $('#ajConflitos').innerHTML = n
+    ? `<div class="aviso">${I.alerta}<p>${n === 1 ? 'Há 1 arquivo' : `Há ${n} arquivos`} com duas versões.</p><button type="button" class="btn" data-action="conflitos">Resolver</button></div>`
+    : `<p class="hint ok-line">${I.check}Nenhum conflito de sincronização.</p>`;
+  $('#dlgAjustes').showModal();
+}
+function rotuloConflito(c) {
+  const base = c.original.replace(/\.(json|html)$/i, '');
+  const app = S.apps.find(m => m.id === base);
+  const nomeApp = app ? app.nome : base;
+  if (c.pasta === 'dados') return `Dados salvos: ${nomeApp}`;
+  if (c.pasta === 'apps') return c.original.endsWith('.html') ? `Arquivo do app: ${nomeApp}` : `Informações do app: ${nomeApp}`;
+  if (c.pasta === 'uso') return 'Histórico de uso';
+  if (c.original === 'lancador.json') return 'Áreas da biblioteca';
+  return c.nome;
+}
+function dataConflito(nome) {
+  const m = /sync-conflict-(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})/.exec(nome);
+  return m ? `${m[3]}/${m[2]} às ${m[4]}:${m[5]}` : '';
+}
+function renderConflitos() {
+  const l = S.conflitos;
+  $('#listaConflitos').innerHTML = l.length ? l.map(c => {
+    const d = dataConflito(c.nome);
+    const attrs = `data-pasta="${esc(c.pasta)}" data-nome="${esc(c.nome)}" data-original="${esc(c.original)}"`;
+    return `<li><p class="strong">${esc(rotuloConflito(c))}</p><p class="hint">${d ? 'Conflito registrado em ' + d + '.' : 'Existe uma segunda versão deste arquivo.'}</p>
+      <div class="row wrap"><button type="button" class="btn" data-action="conflito" data-modo="manter" ${attrs}>Manter a atual</button><button type="button" class="btn" data-action="conflito" data-modo="outra" ${attrs}>Usar a outra</button></div></li>`;
+  }).join('') : '<li><p class="hint ok-line">' + I.check + 'Nenhum conflito agora.</p></li>';
+}
+async function resolverConflito(el) {
+  const pasta = el.dataset.pasta ? el.dataset.pasta + '/' : '';
+  try {
+    if (el.dataset.modo === 'outra') {
+      const t = await S.backend.readText(pasta + el.dataset.nome);
+      await S.backend.writeText(pasta + el.dataset.original, t);
+    }
+    await S.backend.remove(pasta + el.dataset.nome);
+  } catch (e) { toast('Não foi possível resolver. ' + (e && e.message ? e.message : '')); return; }
+  await recarregar();
+  renderConflitos();
+  if (!S.conflitos.length) { $('#dlgConflitos').close(); toast('Tudo resolvido.'); }
+}
+
+/* ---------- Busca e navegação ---------- */
+function sincronizarBusca(origem) {
+  ['#q', '#q2'].forEach(s => { const el = $(s); if (el !== origem) el.value = S.query; });
+}
+function alternarBusca() {
+  S.searchOpen = !S.searchOpen;
+  $('#searchRow').hidden = !S.searchOpen && !S.query;
+  if (S.searchOpen) $('#q2').focus();
+}
+function irPara(v) {
+  S.view = v;
+  renderTudo();
+  $('#conteudo').scrollTop = 0;
+}
+
+// O APK chama esta função quando o botão Voltar do Android é tocado.
+// Devolve true se tratou o toque, false para o APK minimizar.
+window.lancadorVoltar = function () {
+  if (!$('#menuApp').hidden) { fecharMenu(); return true; }
+  const abertos = $$('dialog[open]');
+  if (abertos.length) { abertos[abertos.length - 1].close(); return true; }
+  if (S.running) { pedirFecharApp(); return true; }
+  if (S.searchOpen || S.query) { S.searchOpen = false; S.query = ''; sincronizarBusca(); $('#searchRow').hidden = true; renderTudo(); return true; }
+  if (S.view !== 'todos' || S.theme) { S.theme = ''; irPara('todos'); return true; }
+  return false;
+};
+
+async function aoClicar(e) {
+  if (!e.target.closest('.menu-wrap')) fecharMenu();
+  const el = e.target.closest('[data-action]');
+  if (!el) return;
+  const a = el.dataset.action;
+  switch (a) {
+    case 'view': irPara(el.dataset.view); break;
+    case 'tema': S.theme = S.theme === el.dataset.tema ? '' : el.dataset.tema; renderTudo(); break;
+    case 'limpar-tema': S.theme = ''; renderTudo(); break;
+    case 'limpar-busca': S.query = ''; sincronizarBusca(); renderTudo(); break;
+    case 'limpar-filtros': S.theme = ''; S.query = ''; sincronizarBusca(); renderTudo(); break;
+    case 'abrir': abrirApp(el.dataset.id); break;
+    case 'importar': abrirFormApp(); break;
+    case 'nova-area': abrirFormArea(null, el.dataset.origem); break;
+    case 'editar-area': abrirFormArea(el.dataset.area); break;
+    case 'apagar-area': apagarArea(); break;
+    case 'cor-area': FA.cor = Number(el.dataset.cor); renderCores(); break;
+    case 'buscar': alternarBusca(); break;
+    case 'ajustes': abrirAjustes(); break;
+    case 'conflitos': renderConflitos(); $('#dlgConflitos').showModal(); break;
+    case 'conflito': resolverConflito(el); break;
+    case 'reler': await recarregar(); toast('Pasta lida de novo.'); break;
+    case 'trocar-pasta':
+      $('#dlgAjustes').close();
+      if (window.LancadorNativo) mostrarSetup('nativo', prefs.get('caminhoNativo'));
+      else await escolherPasta();
+      break;
+    case 'fechar-dialogo': el.closest('dialog').close(); break;
+    case 'add-tema': adicionarTemaForm(); break;
+    case 'form-area': F.area = el.dataset.area; renderFormAreas(); renderPreview(); break;
+    case 'form-tema': {
+      const t = el.dataset.tema;
+      if (F.temas.has(t)) F.temas.delete(t); else F.temas.add(t);
+      renderFormTemas(); renderPreview();
+      break;
+    }
+    case 'remover-do-form': { const id = F && F.id; $('#dlgApp').close(); if (id) removerApp(id); break; }
+    case 'fechar-app': pedirFecharApp(); break;
+    case 'recarregar-app': recarregarApp(); break;
+    case 'tela-cheia': telaCheia(); break;
+    case 'menu-app': alternarMenu(); break;
+    case 'editar-app': fecharMenu(); if (S.running) abrirFormApp(S.running.id); break;
+    case 'favoritar-app': fecharMenu(); alternarFavorito(); break;
+    case 'apagar-dados-app': fecharMenu(); apagarDadosApp(); break;
+    case 'remover-app': fecharMenu(); if (S.running) removerApp(S.running.id); break;
+    case 'escolher-pasta': escolherPasta(); break;
+    case 'reconectar': reconectar(); break;
+    case 'usar-caminho': usarCaminhoNativo(); break;
+  }
+}
+
+function ligarEventos() {
+  $$('[data-icon]').forEach(el => { el.innerHTML = I[el.dataset.icon] || ''; });
+  document.addEventListener('click', aoClicar);
+  document.addEventListener('contextmenu', e => {
+    const c = e.target.closest('.card[data-id], .recent[data-id]');
+    if (!c || !S.backend) return;
+    e.preventDefault();
+    abrirFormApp(c.dataset.id);
+  });
+  ['#q', '#q2'].forEach(s => $(s).addEventListener('input', e => { S.query = e.target.value; sincronizarBusca(e.target); renderTudo(); }));
+  $('#ordem').value = S.sort === 'az' ? 'az' : 'recentes';
+  $('#ordem').addEventListener('change', e => { S.sort = e.target.value; prefs.set('ordem', S.sort); renderConteudo(); });
+  $('#arquivo').addEventListener('change', aoEscolherArquivo);
+  $('#fNome').addEventListener('input', () => { if (F && !F.simboloManual) $('#fSimbolo').value = simboloDe($('#fNome').value); renderPreview(); });
+  $('#fSimbolo').addEventListener('input', () => { if (F) F.simboloManual = true; renderPreview(); });
+  ['#fDesc', '#offline', '#fFav'].forEach(s => $(s).addEventListener('input', renderPreview));
+  $('#fNovoTema').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); adicionarTemaForm(); } });
+  $('#formApp').addEventListener('submit', salvarFormApp);
+  $('#formArea').addEventListener('submit', salvarFormArea);
+  $('#ajAparelho').addEventListener('change', async e => {
+    const nome = e.target.value.trim() || 'Aparelho';
+    prefs.set('aparelhoNome', nome);
+    if (S.backend) { try { await S.backend.writeText(`uso/${aparelho().id}.json`, JSON.stringify({ aparelho: nome, recentes: S.meuUso }, null, 2)); } catch (err) { /* tenta na próxima */ } }
+    toast('Nome do aparelho salvo.');
+  });
+  window.addEventListener('message', aoReceberMensagem);
+  window.addEventListener('popstate', () => { if (S.running) fecharAppInterno(); });
+  const podeReler = () => S.backend && !S.running && !document.querySelector('dialog[open]');
+  window.addEventListener('focus', () => { if (podeReler()) recarregar(); });
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') { if (S.running) salvarDados(S.running); return; }
+    if (podeReler()) recarregar();
+  });
+  window.addEventListener('pagehide', () => { if (S.running) salvarDados(S.running); });
+  setInterval(() => { if (podeReler() && document.visibilityState === 'visible') recarregar(); }, 20000);
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') fecharMenu();
+    if (e.key === '/' && !e.target.closest('input, textarea, select, [contenteditable]') && S.backend && !S.running && !document.querySelector('dialog[open]')) {
+      e.preventDefault();
+      const q = $('#q');
+      if (q.offsetParent) q.focus(); else { S.searchOpen = true; $('#searchRow').hidden = false; $('#q2').focus(); }
+    }
+  });
+}
+
+async function iniciar() {
+  ligarEventos();
+  if ('serviceWorker' in navigator && location.protocol === 'https:' && !window.Capacitor) navigator.serviceWorker.register('sw.js').catch(() => {});
+  if (window.Capacitor && !window.LancadorNativo) {
+    const t0 = Date.now();
+    while (!window.LancadorNativo && Date.now() - t0 < 3000) await espera(50);
+  }
+  if (window.LancadorNativo) {
+    const caminho = prefs.get('caminhoNativo');
+    try { if (caminho && await window.LancadorNativo.temAcesso()) return conectar(new NativeBackend(caminho), caminho); } catch (e) { /* pede de novo */ }
+    let padrao = caminho;
+    if (!padrao) { try { padrao = (window.LancadorNativo.pastaPadrao && await window.LancadorNativo.pastaPadrao()) || 'Lancador'; } catch (e) { padrao = 'Lancador'; } }
+    return mostrarSetup('nativo', padrao);
+  }
+  if ('showDirectoryPicker' in window) {
+    let h = null;
+    try { h = await kvGet('pasta'); } catch (e) { /* nada guardado */ }
+    if (h) {
+      S.handle = h;
+      let p = 'prompt';
+      try { p = await h.queryPermission({ mode: 'readwrite' }); } catch (e) { /* pede de novo */ }
+      if (p === 'granted') return conectar(new FsBackend(h), h.name);
+      return mostrarSetup('reconectar', h);
+    }
+    return mostrarSetup('escolher');
+  }
+  mostrarSetup('sem-suporte');
+}
+
+iniciar();
+</script>
+</body>
+</html>
