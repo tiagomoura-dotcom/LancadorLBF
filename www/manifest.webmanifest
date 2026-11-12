@@ -1,12 +1,12 @@
 {
-  "name": "Lançador",
-  "short_name": "Lançador",
+  "name": "HTMLTi",
+  "short_name": "HTMLTi",
   "description": "Guarda e roda os seus apps HTML, organizados por áreas e temas.",
   "lang": "pt-BR",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#F2F4F6",
+  "background_color": "#15191F",
   "theme_color": "#15191F",
   "icons": [
     { "src": "icone-192.png", "sizes": "192x192", "type": "image/png" },

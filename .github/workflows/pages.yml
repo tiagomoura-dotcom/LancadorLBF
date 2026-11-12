@@ -28,7 +28,7 @@ jobs:
       - name: Conferir www/index.html
         run: |
           if [ ! -f www/index.html ]; then
-            echo "::error file=www/index.html::Falta www/index.html. Envie a pasta www/ do Lançador para o repositório."
+            echo "::error file=www/index.html::Falta www/index.html. Envie a pasta www/ do HTMLTi para o repositório."
             exit 1
           fi
 

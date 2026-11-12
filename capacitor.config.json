@@ -1,6 +1,6 @@
 {
   "appId": "com.pessoal.lancador",
-  "appName": "Lançador",
+  "appName": "HTMLTi",
   "webDir": "www",
   "android": {
     "webContentsDebuggingEnabled": true

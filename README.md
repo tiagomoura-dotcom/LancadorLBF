@@ -1,9 +1,9 @@
-# Lançador
+# HTMLTi
 
-App pessoal que guarda e roda apps HTML feitos no chat com o Claude.
+App pessoal (antigo Lançador) que guarda e roda apps HTML feitos no chat com o Claude.
 O mesmo `www/index.html` roda no PC (GitHub Pages, Chrome ou Edge) e no Android (APK Capacitor).
 
-**APK mais recente:** https://github.com/tiagomoura-dotcom/LancadorLBF/releases/download/ultima-versao/lancador.apk
+**APK mais recente:** https://github.com/tiagomoura-dotcom/LancadorLBF/releases/download/ultima-versao/htmlti.apk
 
 **PC:** https://tiagomoura-dotcom.github.io/LancadorLBF/
 
@@ -15,7 +15,7 @@ e publica `www/` no GitHub Pages. Todos os APKs têm a mesma assinatura
 
 | Onde | O quê |
 |---|---|
-| `www/` | O Lançador (HTML, CSS e JS sem build). Publicado no Pages e copiado para o APK. |
+| `www/` | O HTMLTi (HTML, CSS e JS sem build). Publicado no Pages e copiado para o APK. |
 | `www/nativo.js` | Ponte nativa: no APK define `window.LancadorNativo` e liga o botão Voltar a `window.lancadorVoltar()`. No PC não faz nada. |
 | `android/app/src/main/java/com/pessoal/lancador/ArquivosPlugin.java` | Plugin `LancadorArquivos`: lê e grava arquivos da memória interna com `java.io.File`. |
 | `android/app/src/main/java/com/pessoal/lancador/MainActivity.java` | Mantém o WebView abaixo das barras do sistema, pinta a barra com a `theme-color` da página e ajusta o seletor de arquivos. |

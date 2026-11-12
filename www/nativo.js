@@ -1,5 +1,5 @@
 /*
- * Ponte nativa do Lançador.
+ * Ponte nativa do HTMLTi (antigo Lançador).
  *
  * No PC (Chrome/Edge) este arquivo não faz nada.
  * No APK (Capacitor) define window.LancadorNativo, que lê e grava arquivos na memória
@@ -15,6 +15,10 @@
  *   lerTexto(caminho)             -> string
  *   escreverTexto(caminho, texto) -> undefined
  *   apagar(caminho)               -> undefined
+ * Extras do HTMLTi:
+ *   lerBase64(caminho)            -> string (conteúdo em base64)
+ *   escreverBase64(caminho, b64)  -> undefined (mesma gravação atômica de escreverTexto)
+ *   compartilhar(nome, b64, tipo, titulo) -> abre o menu de compartilhar do Android
  * listar, lerTexto e apagar rejeitam com erro.code === "NAO_ENCONTRADO" quando o
  * arquivo ou a pasta não existe.
  */
@@ -54,7 +58,13 @@
     escreverTexto: function (caminho, texto) {
       return chamar('escreverTexto', { caminho: caminho, texto: texto == null ? '' : String(texto) });
     },
-    apagar: function (caminho) { return chamar('apagar', { caminho: caminho }); }
+    apagar: function (caminho) { return chamar('apagar', { caminho: caminho }); },
+    // Extras do HTMLTi (arquivos binários e menu de compartilhar do Android)
+    lerBase64: function (caminho) { return chamar('lerBase64', { caminho: caminho }); },
+    escreverBase64: function (caminho, base64) { return chamar('escreverBase64', { caminho: caminho, base64: base64 || '' }); },
+    compartilhar: function (nome, base64, tipo, titulo) {
+      return chamar('compartilhar', { nome: nome, base64: base64 || '', tipo: tipo || 'application/octet-stream', titulo: titulo || nome });
+    }
   };
 
   // Botão Voltar: o Lançador decide (fechar o app aberto, sair de um menu...).

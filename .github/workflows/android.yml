@@ -24,7 +24,7 @@ jobs:
         run: |
           for f in www/index.html www/nativo.js www/icone-512.png; do
             if [ ! -f "$f" ]; then
-              echo "::error file=$f::Falta $f. Envie a pasta www/ do Lançador para o repositório."
+              echo "::error file=$f::Falta $f. Envie a pasta www/ do HTMLTi para o repositório."
               exit 1
             fi
           done
@@ -58,13 +58,13 @@ jobs:
         run: ./gradlew assembleDebug --stacktrace
 
       - name: Nomear APK
-        run: cp android/app/build/outputs/apk/debug/app-debug.apk lancador.apk
+        run: cp android/app/build/outputs/apk/debug/app-debug.apk htmlti.apk
 
       - name: Publicar artefato
         uses: actions/upload-artifact@v7
         with:
           name: lancador-debug
-          path: lancador.apk
+          path: htmlti.apk
           if-no-files-found: error
 
       - name: Atualizar a release "ultima-versao"
@@ -80,4 +80,5 @@ jobs:
           else
             gh release create ultima-versao --title "Última versão" --notes "$notes" --latest
           fi
-          gh release upload ultima-versao lancador.apk --clobber
+          gh release upload ultima-versao htmlti.apk --clobber
+          gh release delete-asset ultima-versao lancador.apk -y 2>/dev/null || true

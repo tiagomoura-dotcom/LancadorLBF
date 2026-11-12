@@ -1,10 +1,13 @@
 package com.pessoal.lancador;
 
+import android.content.ClipData;
 import android.content.Intent;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Environment;
 import android.provider.Settings;
+import android.util.Base64;
+import androidx.core.content.FileProvider;
 import androidx.activity.result.ActivityResult;
 import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
@@ -118,15 +121,9 @@ public class ArquivosPlugin extends Plugin {
             call.reject("Arquivo não encontrado: " + call.getString("caminho"), NAO_ENCONTRADO);
             return;
         }
-        try (FileInputStream in = new FileInputStream(arquivo)) {
-            byte[] bytes = new byte[(int) arquivo.length()];
-            int lidos = 0;
-            while (lidos < bytes.length) {
-                int n = in.read(bytes, lidos, bytes.length - lidos);
-                if (n < 0) break;
-                lidos += n;
-            }
-            String texto = new String(bytes, 0, lidos, StandardCharsets.UTF_8);
+        try {
+            byte[] bytes = lerBytes(arquivo);
+            String texto = new String(bytes, StandardCharsets.UTF_8);
             // Remove o BOM, se houver.
             if (texto.startsWith("﻿")) texto = texto.substring(1);
             resolverValor(call, texto);
@@ -141,6 +138,87 @@ public class ArquivosPlugin extends Plugin {
         if (destino == null) return;
         String texto = call.getString("texto");
         if (texto == null) texto = "";
+        gravarAtomico(call, destino, texto.getBytes(StandardCharsets.UTF_8));
+    }
+
+    @PluginMethod
+    public void lerBase64(PluginCall call) {
+        File arquivo = resolver(call, false);
+        if (arquivo == null) return;
+        if (!arquivo.isFile()) {
+            call.reject("Arquivo não encontrado: " + call.getString("caminho"), NAO_ENCONTRADO);
+            return;
+        }
+        try {
+            resolverValor(call, Base64.encodeToString(lerBytes(arquivo), Base64.NO_WRAP));
+        } catch (IOException e) {
+            rejeitarES(call, "ler", e);
+        }
+    }
+
+    @PluginMethod
+    public void escreverBase64(PluginCall call) {
+        File destino = resolver(call, false);
+        if (destino == null) return;
+        byte[] bytes;
+        try {
+            bytes = Base64.decode(call.getString("base64", ""), Base64.DEFAULT);
+        } catch (IllegalArgumentException e) {
+            call.reject("Conteúdo em base64 inválido", CAMINHO_INVALIDO);
+            return;
+        }
+        gravarAtomico(call, destino, bytes);
+    }
+
+    /** Abre o menu de compartilhar do Android com um arquivo (gravado antes no cache do app). */
+    @PluginMethod
+    public void compartilhar(PluginCall call) {
+        String nome = call.getString("nome", "arquivo");
+        String tipo = call.getString("tipo", "application/octet-stream");
+        String titulo = call.getString("titulo", nome);
+        nome = nome.replaceAll("[\\\\/:*?\"<>|\\u0000-\\u001f]", "_").trim();
+        if (nome.isEmpty() || nome.startsWith(".")) nome = "arquivo" + nome;
+        byte[] bytes;
+        try {
+            bytes = Base64.decode(call.getString("base64", ""), Base64.DEFAULT);
+        } catch (IllegalArgumentException e) {
+            call.reject("Conteúdo em base64 inválido", CAMINHO_INVALIDO);
+            return;
+        }
+        File pasta = new File(getContext().getCacheDir(), "compartilhar");
+        File[] antigos = pasta.listFiles();
+        if (antigos != null) for (File f : antigos) //noinspection ResultOfMethodCallIgnored
+            f.delete();
+        //noinspection ResultOfMethodCallIgnored
+        pasta.mkdirs();
+        File arquivo = new File(pasta, nome);
+        try (FileOutputStream out = new FileOutputStream(arquivo)) {
+            out.write(bytes);
+        } catch (IOException e) {
+            rejeitarES(call, "preparar", e);
+            return;
+        }
+        Uri uri = FileProvider.getUriForFile(getContext(), getContext().getPackageName() + ".fileprovider", arquivo);
+        Intent envio = new Intent(Intent.ACTION_SEND);
+        envio.setType(tipo);
+        envio.putExtra(Intent.EXTRA_STREAM, uri);
+        envio.putExtra(Intent.EXTRA_TITLE, nome);
+        envio.putExtra(Intent.EXTRA_SUBJECT, titulo);
+        envio.setClipData(ClipData.newRawUri(nome, uri));
+        envio.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        Intent menu = Intent.createChooser(envio, "Compartilhar " + nome);
+        menu.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        getActivity().runOnUiThread(() -> {
+            try {
+                getActivity().startActivity(menu);
+                call.resolve();
+            } catch (Exception e) {
+                call.reject("Não foi possível abrir o menu de compartilhar: " + e.getMessage());
+            }
+        });
+    }
+
+    private void gravarAtomico(PluginCall call, File destino, byte[] bytes) {
         if (destino.isDirectory()) {
             call.reject("Já existe uma pasta com esse nome: " + call.getString("caminho"), CAMINHO_INVALIDO);
             return;
@@ -155,7 +233,7 @@ public class ArquivosPlugin extends Plugin {
         File temp = new File(pasta, TEMP_PREFIXO + destino.getName() + "." + UUID.randomUUID().toString().substring(0, 8) + TEMP_SUFIXO);
         try {
             try (FileOutputStream out = new FileOutputStream(temp)) {
-                out.write(texto.getBytes(StandardCharsets.UTF_8));
+                out.write(bytes);
                 out.flush();
                 out.getFD().sync();
             }
@@ -214,6 +292,19 @@ public class ArquivosPlugin extends Plugin {
         JSObject r = new JSObject();
         r.put("valor", valor);
         call.resolve(r);
+    }
+
+    private static byte[] lerBytes(File arquivo) throws IOException {
+        try (FileInputStream in = new FileInputStream(arquivo)) {
+            byte[] bytes = new byte[(int) arquivo.length()];
+            int lidos = 0;
+            while (lidos < bytes.length) {
+                int n = in.read(bytes, lidos, bytes.length - lidos);
+                if (n < 0) break;
+                lidos += n;
+            }
+            return lidos == bytes.length ? bytes : Arrays.copyOf(bytes, lidos);
+        }
     }
 
     static boolean ehTemporario(String nome) {
