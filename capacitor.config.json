@@ -1,0 +1,13 @@
+{
+  "appId": "com.pessoal.lancador",
+  "appName": "Lançador",
+  "webDir": "www",
+  "android": {
+    "webContentsDebuggingEnabled": true
+  },
+  "plugins": {
+    "SystemBars": {
+      "insetsHandling": "disable"
+    }
+  }
+}

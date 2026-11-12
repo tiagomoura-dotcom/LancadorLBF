@@ -1,0 +1,7 @@
+node_modules/
+.DS_Store
+*.apk
+
+# Gerados pelo CI a partir de www/icone-512.png (npm run icones)
+/assets/
+android/app/src/main/res/mipmap-*/ic_launcher*.png

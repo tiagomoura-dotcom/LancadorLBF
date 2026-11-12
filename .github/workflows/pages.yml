@@ -1,0 +1,45 @@
+name: Site do PC (GitHub Pages)
+
+on:
+  push:
+    branches: [main]
+    paths: ["www/**", ".github/workflows/pages.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Conferir www/index.html
+        run: |
+          if [ ! -f www/index.html ]; then
+            echo "::error file=www/index.html::Falta www/index.html. Envie a pasta www/ do Lançador para o repositório."
+            exit 1
+          fi
+
+      - name: Configurar Pages
+        uses: actions/configure-pages@v6
+
+      - name: Empacotar www/
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: www
+
+      - name: Publicar
+        id: deploy
+        uses: actions/deploy-pages@v5
