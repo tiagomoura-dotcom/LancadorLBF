@@ -255,8 +255,12 @@ public class ArquivosPlugin extends Plugin {
             return;
         }
         if (arquivo.isDirectory()) {
-            call.reject("apagar() só apaga arquivos: " + call.getString("caminho"), CAMINHO_INVALIDO);
-            return;
+            // Pasta: só apaga se estiver vazia (o HTMLTi limpa a pasta de arquivos de um app removido).
+            String[] dentro = arquivo.list();
+            if (dentro == null || dentro.length > 0) {
+                call.reject("apagar() só apaga arquivos ou pastas vazias: " + call.getString("caminho"), CAMINHO_INVALIDO);
+                return;
+            }
         }
         if (!arquivo.delete()) {
             call.reject("Não foi possível apagar " + call.getString("caminho"), SEM_ACESSO);

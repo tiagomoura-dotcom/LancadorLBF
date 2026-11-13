@@ -30,12 +30,16 @@ Lancador/
   apps/<id>.json         nome, símbolo, área, temas, favorito, modo compatível
   dados/<id>.json        o que o app salvou (localStorage e window.storage)
   uso/<aparelho>.json    abertos recentemente, um arquivo por aparelho
-  arquivos/<id>/<nome>   arquivos do app: os que ele "baixou" e os guardados para abrir nele
+  arquivos/<pasta>/<nome> arquivos do app: os que ele "baixou" e os guardados para abrir nele.
+                         <pasta> = meta.pasta (nome do app por padrão; editável no formulário).
+                         Apps antigos usavam arquivos/<id>; o HTMLTi move para a pasta nova ao ler.
 ```
 
 Dentro de cada app, o shim (`shimDoApp`) desvia para o HTMLTi:
-- links com `download` para `blob:` ou `data:` (o arquivo vai para `arquivos/<id>/`);
+- links com `download` para `blob:` ou `data:`: o HTMLTi pergunta o nome (a menos que `meta.salvarDireto`) e grava em `arquivos/<pasta>/`;
 - `<input type="file">` (clique, `click()` ou `showPicker()`): o HTMLTi mostra os arquivos guardados do app e a opção de escolher do aparelho, e devolve os escolhidos ao input com o evento `change`.
+
+A seção "Arquivos" da biblioteca (views `arquivos` e `pasta:<nome>`) mostra as pastas e permite renomear, compartilhar, salvar cópia (PC) e apagar.
 
 As cópias de conflito do Syncthing (`*.sync-conflict-*`) aparecem no Lançador para o usuário escolher qual versão fica.
 
@@ -51,7 +55,7 @@ Todas as funções devolvem Promise. Os caminhos são relativos à memória inte
 | `listar(caminho)` → `[{ nome, tipo }]` | Conteúdo da pasta; `tipo` é `"arquivo"` ou `"pasta"`. Esconde os temporários `.syncthing.*.tmp`. |
 | `lerTexto(caminho)` → `string` | Lê em UTF-8. |
 | `escreverTexto(caminho, texto)` | Grava em UTF-8, criando as pastas; escreve em `.syncthing.<nome>.<x>.tmp` e renomeia (atômico). |
-| `apagar(caminho)` | Apaga um arquivo. |
+| `apagar(caminho)` | Apaga um arquivo ou uma pasta vazia. |
 | `lerBase64(caminho)` → `string` | Extra do HTMLTi: lê qualquer arquivo em base64. |
 | `escreverBase64(caminho, base64)` | Extra do HTMLTi: grava bytes (mesma gravação atômica). |
 | `compartilhar(nome, base64, tipo, titulo)` | Extra do HTMLTi: abre o menu de compartilhar do Android (arquivo no cache, via FileProvider). |

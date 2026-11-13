@@ -247,6 +247,16 @@ legend{margin-bottom:2px;padding:0;font-size:14px;font-weight:600}
 .arquivos li.fora .anome strong{color:var(--muted)}
 .arquivos li.vazio{justify-content:center;color:var(--muted);font-size:14px}
 .arquivos input[type=checkbox]{width:20px;height:20px;margin:0 6px 0 0;accent-color:var(--primary)}
+.pastas{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
+.pasta-card{min-width:0;display:flex;align-items:center;gap:14px;padding:14px 16px;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink);text-align:left}
+.pasta-card:hover{border-color:var(--line-2)}
+.pasta-card .pinfo{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.pasta-card strong{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pasta-card .pinfo span{font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pasta-ico{width:48px;height:48px;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;border-radius:6px;background:var(--chip);color:var(--ink-2)}
+.pasta-ico svg.i{width:24px;height:24px}
+.pasta-vista{display:flex;flex-direction:column;gap:14px;max-width:820px}
+.pasta-vista .arquivos{background:var(--surface)}
 .toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom));z-index:50;max-width:calc(100vw - 32px);transform:translateX(-50%);padding:12px 18px;border-radius:12px;background:#15191F;color:#FFFFFF;font-size:14px;box-shadow:0 8px 24px rgba(0,0,0,.25)}
 
 /* Fold aberto e telas médias */
@@ -418,6 +428,12 @@ legend{margin-bottom:2px;padding:0;font-size:14px;font-weight:600}
         <label class="check"><input type="checkbox" id="fFav">Mostrar nos favoritos</label>
         <label class="check"><input type="checkbox" id="fCompat">Modo compatível (para vídeos incorporados, como YouTube)</label>
       </div>
+      <fieldset>
+        <legend>Arquivos do app</legend>
+        <label class="field">Pasta dos arquivos<input id="fPasta" autocomplete="off" spellcheck="false" placeholder="Usa o nome do app"></label>
+        <p class="hint">Fica em <strong>arquivos/</strong> dentro da pasta sincronizada. É onde vão os arquivos que o app gera e os que você guarda para abrir nele.</p>
+        <label class="check"><input type="checkbox" id="fPerguntar" checked>Perguntar o nome antes de salvar um arquivo gerado pelo app</label>
+      </fieldset>
       <section class="preview-wrap">
         <p class="hint" style="margin-bottom:8px">Prévia na biblioteca</p>
         <div id="previa"></div>
@@ -520,6 +536,23 @@ legend{margin-bottom:2px;padding:0;font-size:14px;font-weight:600}
   </div>
 </dialog>
 
+<dialog class="sheet small" id="dlgNome" aria-labelledby="nmTitulo">
+  <form class="sheet-form" id="formNome" novalidate>
+    <div class="sheet-body">
+      <h2 id="nmTitulo" style="margin:0;font-family:var(--display);font-size:20px"></h2>
+      <p id="nmTexto" class="hint" style="font-size:14px"></p>
+      <label class="field">Nome do arquivo<input id="nmValor" autocomplete="off" spellcheck="false" enterkeyhint="done"></label>
+      <p class="hint" id="nmAviso" style="color:var(--warn-icon);margin-top:-8px"></p>
+      <label class="check" id="nmLinhaOpcao" hidden><input type="checkbox" id="nmOpcao"><span id="nmOpcaoTexto"></span></label>
+      <p class="erro" id="nmErro" role="alert"></p>
+    </div>
+    <footer class="sheet-foot">
+      <button type="button" class="btn" id="nmCancelar" data-action="fechar-dialogo">Cancelar</button>
+      <button type="submit" class="btn primary" id="nmOk">Salvar</button>
+    </footer>
+  </form>
+</dialog>
+
 <dialog class="sheet small" id="dlgEscolher" aria-labelledby="escTitulo">
   <div class="sheet-form">
     <header class="sheet-head">
@@ -545,7 +578,7 @@ legend{margin-bottom:2px;padding:0;font-size:14px;font-weight:600}
 <script>
 'use strict';
 
-const VERSAO = '1.1';
+const VERSAO = '1.2';
 const CONFLITO = /\.sync-conflict-[^.]*/;
 const SANDBOX = 'allow-scripts allow-forms allow-modals allow-popups allow-popups-to-escape-sandbox allow-downloads allow-pointer-lock';
 const PERMISSOES = 'fullscreen *; autoplay *; clipboard-write *; encrypted-media *; picture-in-picture *; microphone *; camera *';
@@ -634,7 +667,7 @@ const S = {
   backend: null, handle: null, pastaNome: '',
   config: null, apps: [], htmlPresente: new Set(), usos: {}, meuUso: {}, conflitos: [], erro: '',
   view: 'todos', theme: '', query: '', sort: prefs.get('ordem', 'recentes'), searchOpen: false,
-  running: null
+  running: null, arq: { pastas: [] }
 };
 
 /* ---------- Guardar a pasta escolhida (PC) ---------- */
@@ -736,6 +769,7 @@ function normalizarMeta(m) {
     area: m.area ? String(m.area) : '',
     temas: Array.isArray(m.temas) ? m.temas.map(String) : [],
     favorito: !!m.favorito, usaInternet: !!m.usaInternet, compativel: !!m.compativel,
+    pasta: m.pasta ? nomeSeguro(m.pasta) : '', salvarDireto: !!m.salvarDireto,
     criadoEm: Number(m.criadoEm) || 0, atualizadoEm: Number(m.atualizadoEm) || 0
   });
 }
@@ -782,6 +816,8 @@ function recarregar() {
       juntar(S.meuUso);
       S.usos = mapa;
       S.conflitos = conflitos;
+      await lerIndiceArquivos();
+      if (await migrarPastasAntigas()) await lerIndiceArquivos();
       S.erro = '';
     } catch (e) {
       console.error(e);
@@ -942,6 +978,8 @@ function tituloView() {
   if (S.view === 'todos') return 'Todos os apps';
   if (S.view === 'recentes') return 'Recentes';
   if (S.view === 'favoritos') return 'Favoritos';
+  if (S.view === 'arquivos') return 'Arquivos';
+  if (S.view.startsWith('pasta:')) return S.view.slice(6);
   const id = S.view.slice(5);
   if (!id) return SEM_AREA.nome;
   const a = S.config.areas.find(x => x.id === id);
@@ -988,14 +1026,15 @@ function renderNav() {
   const total = {
     todos: S.apps.length,
     recentes: S.apps.filter(m => S.usos[m.id]).length,
-    favoritos: S.apps.filter(m => m.favorito).length
+    favoritos: S.apps.filter(m => m.favorito).length,
+    arquivos: S.arq.pastas.reduce((t, p) => t + p.arquivos.length, 0)
   };
-  const lib = [['todos', 'Todos os apps', 'Biblioteca', I.grade], ['recentes', 'Recentes', 'Recentes', I.relogio], ['favoritos', 'Favoritos', 'Favoritos', I.estrela]];
-  const atual = v => (S.view === v ? ' aria-current="page"' : '');
+  const lib = [['todos', 'Todos os apps', 'Biblioteca', I.grade], ['recentes', 'Recentes', 'Recentes', I.relogio], ['favoritos', 'Favoritos', 'Favoritos', I.estrela], ['arquivos', 'Arquivos', 'Arquivos', I.anexo]];
+  const atual = v => ((S.view === v || (v === 'arquivos' && S.view.startsWith('pasta:'))) ? ' aria-current="page"' : '');
   $('#navLib').innerHTML = lib.map(([v, rot, , ic]) => `<button type="button" class="navitem" data-action="view" data-view="${v}"${atual(v)}>${ic}<span class="grow">${rot}</span><span class="count">${total[v]}</span></button>`).join('');
   $('#railLib').innerHTML = lib.map(([v, , curto, ic]) => `<button type="button" class="railitem" data-action="view" data-view="${v}"${atual(v)}>${ic}<span>${curto}</span></button>`).join('')
     + `<button type="button" class="railitem" data-action="ajustes">${I.pasta}<span>Pasta</span></button>`;
-  const naBiblioteca = v => ((S.view === v || (v === 'todos' && S.view.startsWith('area:'))) ? ' aria-current="page"' : '');
+  const naBiblioteca = v => ((S.view === v || (v === 'todos' && S.view.startsWith('area:')) || (v === 'arquivos' && S.view.startsWith('pasta:'))) ? ' aria-current="page"' : '');
   $('#bottomNav').innerHTML = lib.map(([v, , curto, ic]) => `<button type="button" class="bottomitem" data-action="view" data-view="${v}"${naBiblioteca(v)}>${ic}<span>${curto}</span></button>`).join('')
     + `<button type="button" class="bottomitem" data-action="ajustes">${I.pasta}<span>Pasta</span></button>`;
 
@@ -1017,6 +1056,8 @@ function renderNav() {
 
 function renderCabecalho() {
   $('#titulo').textContent = tituloView();
+  if (S.view === 'arquivos') { const n = pastasVisiveis().length; $('#subtitulo').textContent = n === 1 ? '1 pasta' : n + ' pastas'; return; }
+  if (S.view.startsWith('pasta:')) { const n = arquivosDaPasta(S.view.slice(6)).length; $('#subtitulo').textContent = `arquivos/${S.view.slice(6)} · ` + (n === 1 ? '1 arquivo' : n + ' arquivos'); return; }
   $('#subtitulo').textContent = plural(filtrar().length);
 }
 
@@ -1041,8 +1082,44 @@ function renderAviso() {
   el.innerHTML = n ? `<div class="aviso" role="status">${I.alerta}<p>${n === 1 ? 'Um arquivo foi alterado' : n + ' arquivos foram alterados'} em dois aparelhos antes de sincronizar. Escolha qual versão manter.</p><button type="button" class="btn" data-action="conflitos">Resolver</button></div>` : '';
 }
 
+// Seção Arquivos: uma pasta por app, mais pastas que sobraram de apps removidos
+function arquivosDaPasta(nome) { const p = S.arq.pastas.find(x => x.nome.toLowerCase() === String(nome).toLowerCase()); return p ? p.arquivos : []; }
+function pastasVisiveis() {
+  const q = S.query.trim().toLowerCase();
+  const lista = S.apps.map(m => ({ nome: m.pasta || pastaLivre(m.nome, m.id), app: m, arquivos: arquivosDaPasta(pastaDe(m)) }));
+  S.arq.pastas.forEach(p => { if (!appDaPasta(p.nome) && p.arquivos.length) lista.push({ nome: p.nome, app: null, arquivos: p.arquivos }); });
+  return lista.filter(p => !q || p.nome.toLowerCase().includes(q) || (p.app && p.app.nome.toLowerCase().includes(q)) || p.arquivos.some(n => n.toLowerCase().includes(q)))
+    .sort((a, b) => (b.arquivos.length > 0) - (a.arquivos.length > 0) || comparar(a.nome, b.nome));
+}
+function renderArquivosView(el) {
+  if (S.view === 'arquivos') {
+    const l = pastasVisiveis();
+    el.innerHTML = l.length ? `<section class="secao"><p class="hint">Cada app guarda os arquivos dele numa pasta própria, dentro de <strong>arquivos/</strong> na pasta sincronizada.</p><div class="pastas">${l.map(p => {
+      const sub = (p.arquivos.length === 1 ? '1 arquivo' : (p.arquivos.length || 'Nenhum') + (p.arquivos.length === 1 ? '' : ' arquivos')) + (p.app ? '' : ' · sem app');
+      const ico = p.app ? tileHtml(p.app, areaDe(p.app), 'tile md') : `<span class="pasta-ico">${I.pasta}</span>`;
+      return `<button type="button" class="pasta-card" data-action="abrir-pasta" data-pasta="${esc(p.nome)}" data-app="${p.app ? esc(p.app.id) : ''}">${ico}<span class="pinfo"><strong>${esc(p.nome)}</strong><span>${esc(sub)}</span></span></button>`;
+    }).join('')}</div></section>`
+      : '<div class="empty"><p class="empty-title">Nenhuma pasta encontrada</p><p>Os arquivos aparecem aqui quando um app gerar um arquivo ou quando você guardar um.</p></div>';
+    return;
+  }
+  const pasta = S.view.slice(6);
+  const m = appDaPasta(pasta);
+  const q = S.query.trim().toLowerCase();
+  const nomes = arquivosDaPasta(pasta).filter(n => !q || n.toLowerCase().includes(q));
+  el.innerHTML = `<section class="pasta-vista">
+    <div class="row wrap" style="align-items:center">
+      <button type="button" class="linkbtn" data-action="view" data-view="arquivos">${I.voltar}Todas as pastas</button>
+      <span class="spacer"></span>
+      ${m ? `<button type="button" class="btn" data-action="abrir-app-da-pasta" data-pasta="${esc(pasta)}">${I.play}Abrir ${esc(m.nome)}</button>` : ''}
+      <label class="btn primary">${I.mais}Guardar arquivos<input type="file" id="pastaAdicionar" data-pasta="${esc(pasta)}" multiple hidden></label>
+    </div>
+    <ul class="arquivos">${nomes.length ? nomes.map(n => itemArquivoHtml(pasta, n)).join('') : `<li class="vazio">${q ? 'Nenhum arquivo com esse nome.' : 'Pasta vazia.'}</li>`}</ul>
+  </section>`;
+}
+
 function renderConteudo() {
   const el = $('#conteudo');
+  if (S.view === 'arquivos' || S.view.startsWith('pasta:')) return renderArquivosView(el);
   if (!S.apps.length) {
     el.innerHTML = `<div class="empty"><p class="empty-title">Sua biblioteca está vazia</p><p>Importe um arquivo .html que você baixou do chat. Ele aparece aqui e nos outros aparelhos assim que a pasta sincronizar.</p><button type="button" class="btn primary" data-action="importar">${I.mais}Importar app</button></div>`;
     return;
@@ -1248,6 +1325,9 @@ function abrirFormApp(id) {
   $('#fNovoTema').value = '';
   $('#fFav').checked = m ? m.favorito : false;
   $('#fCompat').checked = m ? m.compativel : false;
+  $('#fPasta').value = m ? (m.pasta || '') : '';
+  $('#fPasta').placeholder = m ? (m.pasta ? '' : pastaLivre(m.nome, m.id)) : 'Usa o nome do app';
+  $('#fPerguntar').checked = m ? !m.salvarDireto : true;
   $('#formErro').textContent = '';
   $('#btnRemoverApp').hidden = !m;
   $('#btnCompartilharForm').hidden = !m;
@@ -1334,6 +1414,20 @@ async function salvarFormApp(e) {
   try {
     const antigo = form.id ? S.apps.find(x => x.id === form.id) : null;
     const id = antigo ? antigo.id : novoId(nome);
+    const digitada = $('#fPasta').value.trim() ? nomeSeguro($('#fPasta').value) : '';
+    let pasta = antigo ? antigo.pasta : '';
+    if (digitada || !antigo) {
+      const nova = digitada || pastaLivre(nome, id);
+      const outro = S.apps.find(x => x.id !== id && pastaDe(x).toLowerCase() === nova.toLowerCase());
+      if (outro) { btn.disabled = false; return erro(`O app ${outro.nome} já usa a pasta “${nova}”. Escolha outro nome.`); }
+      if (antigo && pastaDe(antigo) !== nova) {
+        const ocupada = arquivosDaPasta(nova).length && pastaDe(antigo).toLowerCase() !== nova.toLowerCase();
+        if (ocupada) { btn.disabled = false; return erro(`Já existe uma pasta “${nova}” com arquivos. Escolha outro nome.`); }
+        btn.textContent = 'Movendo arquivos…';
+        await moverPasta(pastaDe(antigo), nova);
+      }
+      pasta = nova;
+    }
     let usaInternet = antigo ? antigo.usaInternet : false;
     if (form.html) {
       let html = form.html;
@@ -1356,6 +1450,8 @@ async function salvarFormApp(e) {
       favorito: $('#fFav').checked,
       usaInternet,
       compativel: $('#fCompat').checked,
+      pasta,
+      salvarDireto: !$('#fPerguntar').checked,
       criadoEm: antigo ? antigo.criadoEm : Date.now(),
       atualizadoEm: Date.now()
     });
@@ -1384,7 +1480,7 @@ async function removerApp(id) {
   for (const p of [`apps/${id}.html`, `apps/${id}.json`, `dados/${id}.json`]) {
     try { await S.backend.remove(p); } catch (e) { if (!naoEncontrado(e)) console.warn(e); }
   }
-  await apagarArquivosDoApp(id);
+  await apagarArquivosDoApp(m);
   await recarregar();
   toast(`${m.nome} foi removido.`);
 }
@@ -1726,57 +1822,198 @@ async function compartilharApp(id) {
   } catch (e) { console.error(e); toast('Não foi possível compartilhar. ' + (e && e.message ? e.message : '')); }
 }
 
-/* ---------- Arquivos do app (pasta arquivos/<id>) ---------- */
-async function listarArquivos(id) {
-  const l = await S.backend.list('arquivos/' + id);
+/* ---------- Pastas de arquivos (arquivos/<pasta>, uma por app) ---------- */
+// Cada app tem uma pasta com o nome dele (meta.pasta). Apps antigos usavam arquivos/<id>.
+function pastaDe(m) { return (m && m.pasta) || (m && m.id) || ''; }
+function appDaPasta(pasta) { const p = String(pasta).toLowerCase(); return S.apps.find(m => pastaDe(m).toLowerCase() === p) || null; }
+async function listarArquivos(pasta) {
+  const l = await S.backend.list('arquivos/' + pasta);
   return l.filter(x => x.kind === 'file' && visivel(x.name)).map(x => x.name).sort(comparar);
 }
-async function guardarArquivo(id, nome, blob) {
-  const final = nomeUnico(await listarArquivos(id), nomeSeguro(nome));
-  await S.backend.writeBlob(`arquivos/${id}/${final}`, blob.type ? blob : new Blob([blob], { type: tipoDe(final) }));
+async function existeNaPasta(pasta, nome) { return (await listarArquivos(pasta)).some(n => n.toLowerCase() === nome.toLowerCase()); }
+function pastaLivre(base, idDono) {
+  const usadas = new Set(S.apps.filter(m => m.id !== idDono).map(m => pastaDe(m).toLowerCase()));
+  (S.arq.pastas || []).forEach(p => { const dono = appDaPasta(p.nome); if (!dono || dono.id !== idDono) usadas.add(p.nome.toLowerCase()); });
+  let nome = nomeSeguro(base), i = 2;
+  while (usadas.has(nome.toLowerCase())) nome = `${nomeSeguro(base)} (${i++})`;
+  return nome;
+}
+async function moverArquivo(de, para) {
+  const b = await S.backend.readBlob(de);
+  await S.backend.writeBlob(para, b);
+  await S.backend.remove(de);
+}
+async function moverPasta(de, para) {
+  if (de === para) return;
+  if (de.toLowerCase() === para.toLowerCase()) { const tmp = `~${para}-renomeando`; await moverPasta(de, tmp); await moverPasta(tmp, para); return; }
+  for (const n of await listarArquivos(de)) await moverArquivo(`arquivos/${de}/${n}`, `arquivos/${para}/${n}`);
+  try { await S.backend.remove('arquivos/' + de); } catch (e) { /* pasta vazia fica */ }
+}
+// Garante que o app tenha a pasta com o nome dele e devolve o nome da pasta
+async function garantirPasta(id) {
+  const m = S.apps.find(x => x.id === id);
+  if (!m) return id;
+  if (m.pasta) return m.pasta;
+  const nova = pastaLivre(m.nome, m.id);
+  await moverPasta(m.id, nova);
+  m.pasta = nova;
+  await salvarMeta(m);
+  return nova;
+}
+// Lê arquivos/ inteiro para a seção Arquivos
+async function lerIndiceArquivos() {
+  const pastas = [];
+  try {
+    const l = (await S.backend.list('arquivos')).filter(x => x.kind === 'directory' && visivel(x.name));
+    for (const x of l) {
+      let nomes = [];
+      try { nomes = await listarArquivos(x.name); } catch (e) { nomes = []; }
+      pastas.push({ nome: x.name, arquivos: nomes });
+    }
+  } catch (e) { console.warn(e); }
+  S.arq = { pastas: pastas.sort((a, b) => comparar(a.nome, b.nome)) };
+}
+async function migrarPastasAntigas() {
+  let mudou = false;
+  for (const m of S.apps) {
+    if (m.pasta || !S.arq.pastas.some(p => p.nome === m.id)) continue;
+    try { await garantirPasta(m.id); mudou = true; } catch (e) { console.warn(e); }
+  }
+  return mudou;
+}
+async function atualizarArquivos() {
+  await lerIndiceArquivos();
+  if (!S.running) renderTudo();
+  if ($('#dlgArquivos').open) renderArquivos();
+}
+
+/* ---------- Janela de nome (salvar como e renomear) ---------- */
+function pedirNome({ titulo, texto, valor, rotuloOk, rotuloCancelar, opcao, validar, avisar }) {
+  return new Promise(res => {
+    const d = $('#dlgNome'), inp = $('#nmValor'), err = $('#nmErro'), av = $('#nmAviso');
+    $('#nmTitulo').textContent = titulo;
+    $('#nmTexto').textContent = texto || '';
+    $('#nmOk').textContent = rotuloOk || 'Salvar';
+    $('#nmCancelar').textContent = rotuloCancelar || 'Cancelar';
+    $('#nmLinhaOpcao').hidden = !opcao;
+    if (opcao) { $('#nmOpcaoTexto').textContent = opcao.texto; $('#nmOpcao').checked = !!opcao.marcado; }
+    inp.value = valor || '';
+    err.textContent = ''; av.textContent = '';
+    let fim = false, seq = 0;
+    const checar = async () => {
+      const n = ++seq;
+      const t = avisar ? await avisar(nomeSeguro(inp.value)) : '';
+      if (n === seq) av.textContent = t || '';
+    };
+    const terminar = v => { if (fim) return; fim = true; inp.oninput = null; $('#formNome').onsubmit = null; d.onclose = null; if (d.open) d.close(); res(v); };
+    inp.oninput = () => { err.textContent = ''; checar(); };
+    $('#formNome').onsubmit = async e => {
+      e.preventDefault();
+      const nome = nomeSeguro(inp.value);
+      if (!inp.value.trim()) { err.textContent = 'Dê um nome.'; return; }
+      const problema = validar ? await validar(nome) : '';
+      if (problema) { err.textContent = problema; return; }
+      terminar({ nome, opcao: opcao ? $('#nmOpcao').checked : false });
+    };
+    d.onclose = () => terminar(null);
+    d.showModal();
+    checar();
+    inp.focus();
+    const ext = extDe(inp.value);
+    inp.setSelectionRange(0, ext && inp.value.length > ext.length + 1 ? inp.value.length - ext.length - 1 : inp.value.length);
+  });
+}
+
+/* ---------- Guardar arquivos ---------- */
+async function guardarArquivo(id, nome, blob, substituir = false) {
+  const pasta = await garantirPasta(id);
+  const final = substituir ? nomeSeguro(nome) : nomeUnico(await listarArquivos(pasta), nomeSeguro(nome));
+  await S.backend.writeBlob(`arquivos/${pasta}/${final}`, blob.type ? blob : new Blob([blob], { type: tipoDe(final) }));
   return final;
 }
-async function guardarArquivoGerado(id, nome, blob) {
+// Arquivo que o app "baixou": pergunta o nome (a não ser que o app esteja para salvar direto)
+let filaSalvar = Promise.resolve();
+function guardarArquivoGerado(id, nome, blob) {
+  filaSalvar = filaSalvar.then(() => salvarGerado(id, nome, blob)).catch(e => console.error(e));
+}
+async function salvarGerado(id, nome, blob) {
+  const m = S.apps.find(x => x.id === id);
+  if (!m) return;
   try {
-    const final = await guardarArquivo(id, nome, blob);
-    toast(`“${final}” foi guardado nos arquivos do app.`);
-    if ($('#dlgArquivos').open && A && A.id === id) renderArquivos();
+    const pasta = await garantirPasta(id);
+    let final = nomeUnico(await listarArquivos(pasta), nomeSeguro(nome)), substituir = false;
+    if (!m.salvarDireto) {
+      const r = await pedirNome({
+        titulo: 'Salvar arquivo', valor: final, rotuloOk: 'Salvar', rotuloCancelar: 'Descartar',
+        texto: `${m.nome} gerou um arquivo. Ele vai para a pasta “${pasta}” (${tamanho(blob.size)}).`,
+        opcao: { texto: 'Não perguntar de novo neste app (salvar direto com o nome sugerido)', marcado: false },
+        avisar: async n => (await existeNaPasta(pasta, n)) ? 'Já existe um arquivo com esse nome. Salvar vai substituí-lo.' : ''
+      });
+      if (!r) { toast('Arquivo descartado.'); return; }
+      final = r.nome; substituir = true;
+      if (r.opcao) { m.salvarDireto = true; try { await salvarMeta(m); } catch (e) { /* tenta na próxima */ } }
+    }
+    final = await guardarArquivo(id, final, blob, substituir);
+    toast(`“${final}” foi salvo em ${pasta}.`);
+    atualizarArquivos();
   } catch (e) { console.error(e); toast('Não foi possível guardar o arquivo na pasta. ' + (e && e.message ? e.message : '')); }
 }
 
-let A = null; // janela de arquivos aberta: { id, nomes }
+/* ---------- Lista de arquivos (janela do app e seção Arquivos) ---------- */
+function itemArquivoHtml(pasta, n) {
+  const at = `data-pasta="${esc(pasta)}" data-nome="${esc(n)}"`;
+  const baixar = !window.LancadorNativo;
+  return `<li><span class="anome"><strong>${esc(n)}</strong><span>${esc(extDe(n).toUpperCase() || 'Arquivo')}</span></span>
+      <button type="button" class="icon-btn" data-action="arq-renomear" ${at} aria-label="Renomear ${esc(n)}" title="Renomear">${I.lapis}</button>
+      <button type="button" class="icon-btn" data-action="arq-compartilhar" ${at} aria-label="Compartilhar ${esc(n)}" title="Compartilhar">${I.compartilhar}</button>
+      ${baixar ? `<button type="button" class="icon-btn" data-action="arq-baixar" ${at} aria-label="Salvar uma cópia de ${esc(n)}" title="Salvar uma cópia no computador">${I.baixar}</button>` : ''}
+      <button type="button" class="icon-btn" data-action="arq-apagar" ${at} aria-label="Apagar ${esc(n)}" title="Apagar">${I.lixo}</button></li>`;
+}
+
+let A = null; // janela de arquivos do app aberto: { id, pasta }
 async function abrirArquivos(id) {
   const m = S.apps.find(x => x.id === id);
   if (!m) return;
-  A = { id, nomes: [] };
+  let pasta;
+  try { pasta = await garantirPasta(id); } catch (e) { toast('Não foi possível preparar a pasta do app.'); return; }
+  A = { id, pasta };
   $('#arqTitulo').textContent = 'Arquivos de ' + m.nome;
-  $('#arqPasta').textContent = `arquivos/${id}`;
+  $('#arqPasta').textContent = `arquivos/${pasta}`;
   $('#listaArquivos').innerHTML = '<li class="vazio">Lendo…</li>';
-  $('#dlgArquivos').showModal();
+  if (!$('#dlgArquivos').open) $('#dlgArquivos').showModal();
   await renderArquivos();
 }
 async function renderArquivos() {
   if (!A) return;
   const ctx = A;
-  try { ctx.nomes = await listarArquivos(ctx.id); } catch (e) { ctx.nomes = []; toast('Não foi possível ler os arquivos.'); }
+  let nomes = [];
+  try { nomes = await listarArquivos(ctx.pasta); } catch (e) { toast('Não foi possível ler os arquivos.'); }
   if (A !== ctx) return;
-  const baixar = !window.LancadorNativo;
-  $('#listaArquivos').innerHTML = ctx.nomes.length ? ctx.nomes.map(n => `<li><span class="anome"><strong>${esc(n)}</strong><span>${esc(extDe(n).toUpperCase() || 'Arquivo')}</span></span>
-      <button type="button" class="icon-btn" data-action="arq-compartilhar" data-nome="${esc(n)}" aria-label="Compartilhar ${esc(n)}" title="Compartilhar">${I.compartilhar}</button>
-      ${baixar ? `<button type="button" class="icon-btn" data-action="arq-baixar" data-nome="${esc(n)}" aria-label="Salvar uma cópia de ${esc(n)}" title="Salvar uma cópia no computador">${I.baixar}</button>` : ''}
-      <button type="button" class="icon-btn" data-action="arq-apagar" data-nome="${esc(n)}" aria-label="Apagar ${esc(n)}" title="Apagar">${I.lixo}</button></li>`).join('')
-    : '<li class="vazio">Nenhum arquivo guardado ainda.</li>';
+  $('#listaArquivos').innerHTML = nomes.length ? nomes.map(n => itemArquivoHtml(ctx.pasta, n)).join('') : '<li class="vazio">Nenhum arquivo nesta pasta ainda.</li>';
 }
-async function acaoArquivo(acao, nome) {
-  if (!A) return;
-  const id = A.id;
-  const caminho = `arquivos/${id}/${nome}`;
+async function acaoArquivo(acao, pasta, nome) {
+  const caminho = `arquivos/${pasta}/${nome}`;
+  const reabrir = $('#dlgArquivos').open && A ? A.id : null;
   try {
-    if (acao === 'apagar') {
-      $('#dlgArquivos').close();
-      const ok = await confirmar(`Apagar “${nome}”?`, 'O arquivo sai da pasta e some dos outros aparelhos depois da sincronização.', 'Apagar');
-      if (ok) { await S.backend.remove(caminho); toast('Arquivo apagado.'); }
-      await abrirArquivos(id);
+    if (acao === 'apagar' || acao === 'renomear') {
+      if (reabrir) $('#dlgArquivos').close();
+      if (acao === 'apagar') {
+        if (await confirmar(`Apagar “${nome}”?`, 'O arquivo sai da pasta e some dos outros aparelhos depois da sincronização.', 'Apagar')) {
+          await S.backend.remove(caminho); toast('Arquivo apagado.');
+        }
+      } else {
+        const r = await pedirNome({
+          titulo: 'Renomear arquivo', texto: `Pasta “${pasta}”.`, valor: nome, rotuloOk: 'Renomear',
+          validar: async n => (n.toLowerCase() !== nome.toLowerCase() && await existeNaPasta(pasta, n)) ? 'Já existe um arquivo com esse nome nesta pasta.' : ''
+        });
+        if (r && r.nome !== nome) {
+          if (r.nome.toLowerCase() === nome.toLowerCase()) { const tmp = `arquivos/${pasta}/${r.nome}.renomeando`; await moverArquivo(caminho, tmp); await moverArquivo(tmp, `arquivos/${pasta}/${r.nome}`); }
+          else await moverArquivo(caminho, `arquivos/${pasta}/${r.nome}`);
+          toast(`Renomeado para “${r.nome}”.`);
+        }
+      }
+      if (reabrir) await abrirArquivos(reabrir);
+      await atualizarArquivos();
       return;
     }
     const blob = await S.backend.readBlob(caminho);
@@ -1785,15 +2022,25 @@ async function acaoArquivo(acao, nome) {
     else await compartilharBlob(nome, comTipo);
   } catch (e) { console.error(e); toast('Não foi possível usar o arquivo. ' + (e && e.message ? e.message : '')); }
 }
-async function adicionarArquivos(input) {
-  if (!A) return;
-  const id = A.id, files = Array.from(input.files || []);
+async function adicionarArquivos(input, pasta) {
+  const files = Array.from(input.files || []);
   input.value = '';
+  if (!pasta || !files.length) return;
   let n = 0;
-  for (const f of files) { try { await guardarArquivo(id, f.name, f); n++; } catch (e) { console.error(e); } }
+  for (const f of files) {
+    try { await S.backend.writeBlob(`arquivos/${pasta}/${nomeUnico(await listarArquivos(pasta), nomeSeguro(f.name))}`, f); n++; }
+    catch (e) { console.error(e); }
+  }
   if (n) toast(n === 1 ? 'Arquivo guardado.' : `${n} arquivos guardados.`);
   if (n < files.length) toast('Alguns arquivos não puderam ser guardados.');
-  await renderArquivos();
+  await atualizarArquivos();
+}
+async function apagarArquivosDoApp(m) {
+  const pasta = pastaDe(m);
+  let nomes = [];
+  try { nomes = (await S.backend.list('arquivos/' + pasta)).filter(x => x.kind === 'file').map(x => x.name); } catch (e) { return; }
+  for (const n of nomes) { try { await S.backend.remove(`arquivos/${pasta}/${n}`); } catch (e) { console.warn(e); } }
+  try { await S.backend.remove('arquivos/' + pasta); } catch (e) { /* fica a pasta vazia */ }
 }
 
 // O app pediu um arquivo (<input type="file">)
@@ -1807,7 +2054,7 @@ function aceita(accept, nome) {
 async function abrirEscolha(r, d) {
   if (E) responderEscolha([], false);
   const m = S.apps.find(x => x.id === r.id);
-  E = { r, pedido: d.pedido, multiplo: !!d.multiplo, accept: String(d.accept || ''), nomes: [], marcados: new Set() };
+  E = { r, pedido: d.pedido, multiplo: !!d.multiplo, accept: String(d.accept || ''), nomes: [], marcados: new Set(), pasta: '' };
   $('#escTitulo').textContent = E.multiplo ? 'Abrir arquivos' : 'Abrir arquivo';
   $('#escDica').textContent = `${m ? m.nome : 'O app'} pediu ${E.multiplo ? 'arquivos' : 'um arquivo'}. Escolha um dos arquivos guardados ou um do aparelho.`;
   $('#escErro').textContent = '';
@@ -1819,8 +2066,9 @@ async function abrirEscolha(r, d) {
   if (!$('#dlgEscolher').open) $('#dlgEscolher').showModal();
   const ctx = E;
   let nomes = [];
-  try { nomes = await listarArquivos(r.id); } catch (e) { nomes = []; }
+  try { ctx.pasta = await garantirPasta(r.id); nomes = await listarArquivos(ctx.pasta); } catch (e) { nomes = []; }
   if (E !== ctx) return;
+  $('#escDica').textContent += ` Pasta: “${ctx.pasta}”.`;
   ctx.nomes = nomes.filter(n => aceita(ctx.accept, n)).concat(nomes.filter(n => !aceita(ctx.accept, n)));
   renderEscolha();
 }
@@ -1851,7 +2099,7 @@ async function usarGuardados(nomes) {
   try {
     const arquivos = [];
     for (const n of nomes) {
-      const b = await S.backend.readBlob(`arquivos/${ctx.r.id}/${n}`);
+      const b = await S.backend.readBlob(`arquivos/${ctx.pasta}/${n}`);
       arquivos.push({ nome: n, blob: b.type ? b : new Blob([b], { type: tipoDe(n) }) });
     }
     if (E === ctx) responderEscolha(arquivos);
@@ -1866,6 +2114,7 @@ async function usarDoDispositivo(input) {
     for (const f of files) { try { await guardarArquivo(ctx.r.id, f.name, f); } catch (e) { console.error(e); toast('Não foi possível guardar uma cópia de ' + f.name + '.'); } }
   }
   if (E === ctx) responderEscolha(files.map(f => ({ nome: f.name, blob: f })));
+  if ($('#escGuardar').checked) atualizarArquivos();
 }
 async function apagarArquivosDoApp(id) {
   let nomes = [];
@@ -1944,6 +2193,7 @@ window.lancadorVoltar = function () {
   if (abertos.length) { abertos[abertos.length - 1].close(); return true; }
   if (S.running) { pedirFecharApp(); return true; }
   if (S.searchOpen || S.query) { S.searchOpen = false; S.query = ''; sincronizarBusca(); $('#searchRow').hidden = true; renderTudo(); return true; }
+  if (S.view.startsWith('pasta:')) { irPara('arquivos'); return true; }
   if (S.view !== 'todos' || S.theme) { S.theme = ''; irPara('todos'); return true; }
   return false;
 };
@@ -1988,9 +2238,17 @@ async function aoClicar(e) {
     case 'arquivos-app': fecharMenu(); if (S.running) abrirArquivos(S.running.id); break;
     case 'compartilhar-do-form': if (F && F.id) compartilharApp(F.id); break;
     case 'arquivos-do-form': { const id = F && F.id; $('#dlgApp').close(); if (id) abrirArquivos(id); break; }
-    case 'arq-compartilhar': acaoArquivo('compartilhar', el.dataset.nome); break;
-    case 'arq-baixar': acaoArquivo('baixar', el.dataset.nome); break;
-    case 'arq-apagar': acaoArquivo('apagar', el.dataset.nome); break;
+    case 'arq-compartilhar': acaoArquivo('compartilhar', el.dataset.pasta, el.dataset.nome); break;
+    case 'arq-baixar': acaoArquivo('baixar', el.dataset.pasta, el.dataset.nome); break;
+    case 'arq-apagar': acaoArquivo('apagar', el.dataset.pasta, el.dataset.nome); break;
+    case 'arq-renomear': acaoArquivo('renomear', el.dataset.pasta, el.dataset.nome); break;
+    case 'abrir-pasta': {
+      let pasta = el.dataset.pasta;
+      if (el.dataset.app) { try { pasta = await garantirPasta(el.dataset.app); } catch (e) { toast('Não foi possível preparar a pasta.'); break; } }
+      irPara('pasta:' + pasta);
+      break;
+    }
+    case 'abrir-app-da-pasta': { const m = appDaPasta(el.dataset.pasta); if (m) abrirApp(m.id); break; }
     case 'escolher-guardado': {
       if (!E) break;
       const n = el.dataset.nome;
@@ -2028,7 +2286,8 @@ function ligarEventos() {
   $('#ordem').value = S.sort === 'az' ? 'az' : 'recentes';
   $('#ordem').addEventListener('change', e => { S.sort = e.target.value; prefs.set('ordem', S.sort); renderConteudo(); });
   $('#arquivo').addEventListener('change', aoEscolherArquivo);
-  $('#arqAdicionar').addEventListener('change', e => adicionarArquivos(e.target));
+  $('#arqAdicionar').addEventListener('change', e => adicionarArquivos(e.target, A && A.pasta));
+  $('#conteudo').addEventListener('change', e => { if (e.target.id === 'pastaAdicionar') adicionarArquivos(e.target, e.target.dataset.pasta); });
   $('#escDispositivo').addEventListener('change', e => usarDoDispositivo(e.target));
   $('#dlgEscolher').addEventListener('close', () => { if (E) responderEscolha([]); });
   $('#dlgArquivos').addEventListener('close', () => { A = null; });
