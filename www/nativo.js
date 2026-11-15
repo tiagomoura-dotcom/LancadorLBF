@@ -15,6 +15,11 @@
  *   lerTexto(caminho)             -> string
  *   escreverTexto(caminho, texto) -> undefined
  *   apagar(caminho)               -> undefined
+ *   info(caminho)                 -> { tamanho, modificado }
+ *   criarPasta(caminho)           -> undefined
+ *   apagarPasta(caminho)          -> undefined (com tudo dentro)
+ *   mover(origem, destino)        -> undefined (arquivo ou pasta)
+ *   abrirExterno(caminho, tipo)   -> abre em outro app do Android
  * Extras do HTMLTi:
  *   lerBase64(caminho)            -> string (conteúdo em base64)
  *   escreverBase64(caminho, b64)  -> undefined (mesma gravação atômica de escreverTexto)
@@ -62,6 +67,12 @@
     // Extras do HTMLTi (arquivos binários e menu de compartilhar do Android)
     lerBase64: function (caminho) { return chamar('lerBase64', { caminho: caminho }); },
     escreverBase64: function (caminho, base64) { return chamar('escreverBase64', { caminho: caminho, base64: base64 || '' }); },
+    // Versão 2
+    info: function (caminho) { return chamar('info', { caminho: caminho }); },
+    criarPasta: function (caminho) { return chamar('criarPasta', { caminho: caminho }); },
+    apagarPasta: function (caminho) { return chamar('apagarPasta', { caminho: caminho }); },
+    mover: function (origem, destino) { return chamar('mover', { origem: origem, destino: destino }); },
+    abrirExterno: function (caminho, tipo) { return chamar('abrirExterno', { caminho: caminho, tipo: tipo || 'application/octet-stream' }); },
     compartilhar: function (nome, base64, tipo, titulo) {
       return chamar('compartilhar', { nome: nome, base64: base64 || '', tipo: tipo || 'application/octet-stream', titulo: titulo || nome });
     }

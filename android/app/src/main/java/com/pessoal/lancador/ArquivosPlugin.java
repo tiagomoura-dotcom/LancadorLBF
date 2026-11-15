@@ -269,6 +269,159 @@ public class ArquivosPlugin extends Plugin {
         call.resolve();
     }
 
+    // ---- versão 2: info, criarPasta, apagarPasta, mover, abrirExterno ----
+
+    @PluginMethod
+    public void info(PluginCall call) {
+        File f = resolver(call, false);
+        if (f == null) return;
+        if (!f.exists()) {
+            call.reject("Não encontrado: " + call.getString("caminho"), NAO_ENCONTRADO);
+            return;
+        }
+        JSObject r = new JSObject();
+        r.put("tamanho", f.isFile() ? f.length() : 0);
+        r.put("modificado", f.lastModified());
+        JSObject envelope = new JSObject();
+        envelope.put("valor", r);
+        call.resolve(envelope);
+    }
+
+    @PluginMethod
+    public void criarPasta(PluginCall call) {
+        File f = resolver(call, false);
+        if (f == null) return;
+        if (f.isFile()) {
+            call.reject("Já existe um arquivo com esse nome: " + call.getString("caminho"), CAMINHO_INVALIDO);
+            return;
+        }
+        if (!f.isDirectory() && !f.mkdirs() && !f.isDirectory()) {
+            call.reject("Não foi possível criar a pasta " + call.getString("caminho"), SEM_ACESSO);
+            return;
+        }
+        call.resolve();
+    }
+
+    @PluginMethod
+    public void apagarPasta(PluginCall call) {
+        File f = resolver(call, false);
+        if (f == null) return;
+        if (!f.exists()) {
+            call.reject("Pasta não encontrada: " + call.getString("caminho"), NAO_ENCONTRADO);
+            return;
+        }
+        if (!f.isDirectory()) {
+            call.reject("Não é uma pasta: " + call.getString("caminho"), CAMINHO_INVALIDO);
+            return;
+        }
+        if (!apagarTudo(f)) {
+            call.reject("Não foi possível apagar tudo em " + call.getString("caminho"), SEM_ACESSO);
+            return;
+        }
+        call.resolve();
+    }
+
+    /** Move ou renomeia arquivo ou pasta. Tenta renameTo; se falhar, copia e apaga. */
+    @PluginMethod
+    public void mover(PluginCall call) {
+        File de = resolver(call, "origem", false);
+        if (de == null) return;
+        File para = resolver(call, "destino", false);
+        if (para == null) return;
+        if (!de.exists()) {
+            call.reject("Não encontrado: " + call.getString("origem"), NAO_ENCONTRADO);
+            return;
+        }
+        try {
+            if (de.getCanonicalPath().equals(para.getCanonicalPath())) { call.resolve(); return; }
+            if (para.getCanonicalPath().startsWith(de.getCanonicalPath() + File.separator)) {
+                call.reject("Não dá para mover uma pasta para dentro dela mesma", CAMINHO_INVALIDO);
+                return;
+            }
+        } catch (IOException e) {
+            rejeitarES(call, "mover", e);
+            return;
+        }
+        if (para.exists() && (para.isDirectory() || de.isDirectory())) {
+            call.reject("Já existe: " + call.getString("destino"), CAMINHO_INVALIDO);
+            return;
+        }
+        File pai = para.getParentFile();
+        if (pai != null && !pai.isDirectory() && !pai.mkdirs() && !pai.isDirectory()) {
+            call.reject("Não foi possível criar a pasta " + pai.getPath(), SEM_ACESSO);
+            return;
+        }
+        // Nome que muda só nas maiúsculas: passa por um nome temporário (a memória é insensível à caixa)
+        boolean soCaixa = de.getAbsolutePath().equalsIgnoreCase(para.getAbsolutePath());
+        if (!soCaixa && para.isFile() && !para.delete()) {
+            call.reject("Não foi possível substituir " + call.getString("destino"), SEM_ACESSO);
+            return;
+        }
+        if (soCaixa) {
+            File tmp = new File(de.getParentFile(), de.getName() + "." + UUID.randomUUID().toString().substring(0, 8) + TEMP_SUFIXO);
+            if (de.renameTo(tmp) && tmp.renameTo(para)) { call.resolve(); return; }
+            call.reject("Não foi possível renomear " + call.getString("origem"), SEM_ACESSO);
+            return;
+        }
+        if (de.renameTo(para)) { call.resolve(); return; }
+        try {
+            copiarTudo(de, para);
+            if (!apagarTudo(de)) throw new IOException("a origem não pôde ser apagada depois da cópia");
+            call.resolve();
+        } catch (IOException e) {
+            rejeitarES(call, "mover", e);
+        }
+    }
+
+    /** Abre o arquivo em outro app do Android (leitor de PDF, galeria...). */
+    @PluginMethod
+    public void abrirExterno(PluginCall call) {
+        File f = resolver(call, false);
+        if (f == null) return;
+        if (!f.isFile()) {
+            call.reject("Arquivo não encontrado: " + call.getString("caminho"), NAO_ENCONTRADO);
+            return;
+        }
+        String tipo = call.getString("tipo", "application/octet-stream");
+        Uri uri;
+        try {
+            uri = FileProvider.getUriForFile(getContext(), getContext().getPackageName() + ".fileprovider", f);
+        } catch (IllegalArgumentException e) {
+            call.reject("Não foi possível preparar o arquivo: " + e.getMessage(), ERRO_ES);
+            return;
+        }
+        Intent ver = new Intent(Intent.ACTION_VIEW);
+        ver.setDataAndType(uri, tipo);
+        ver.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
+        Intent menu = Intent.createChooser(ver, "Abrir " + f.getName());
+        menu.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        getActivity().runOnUiThread(() -> {
+            try {
+                getActivity().startActivity(menu);
+                call.resolve();
+            } catch (Exception e) {
+                call.reject("Nenhum app deste aparelho abre esse tipo de arquivo.");
+            }
+        });
+    }
+
+    private static boolean apagarTudo(File f) {
+        File[] dentro = f.isDirectory() ? f.listFiles() : null;
+        boolean ok = true;
+        if (dentro != null) for (File x : dentro) ok &= apagarTudo(x);
+        return f.delete() && ok;
+    }
+
+    private static void copiarTudo(File de, File para) throws IOException {
+        if (de.isDirectory()) {
+            if (!para.isDirectory() && !para.mkdirs()) throw new IOException("não criou " + para.getPath());
+            File[] dentro = de.listFiles();
+            if (dentro != null) for (File x : dentro) copiarTudo(x, new File(para, x.getName()));
+        } else {
+            Files.copy(de.toPath(), para.toPath(), StandardCopyOption.REPLACE_EXISTING);
+        }
+    }
+
     // ---- extra (fora do contrato): cor atrás da barra de status ----
 
     /** Recebe a cor da meta theme-color da página, por exemplo "#1e1e2e". */
@@ -324,7 +477,11 @@ public class ArquivosPlugin extends Plugin {
      * Rejeita a chamada (e devolve null) se o caminho for inválido.
      */
     private File resolver(PluginCall call, boolean podeSerRaiz) {
-        String caminho = call.getString("caminho");
+        return resolver(call, "caminho", podeSerRaiz);
+    }
+
+    private File resolver(PluginCall call, String chave, boolean podeSerRaiz) {
+        String caminho = call.getString(chave);
         if (caminho == null) {
             call.reject("Falta o caminho", CAMINHO_INVALIDO);
             return null;
@@ -356,7 +513,7 @@ public class ArquivosPlugin extends Plugin {
             return null;
         }
         if (!Environment.isExternalStorageManager()) {
-            call.reject("O Lançador ainda não tem acesso a todos os arquivos", SEM_ACESSO);
+            call.reject("O HTMLTi ainda não tem acesso a todos os arquivos", SEM_ACESSO);
             return null;
         }
         return f;

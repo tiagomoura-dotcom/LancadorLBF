@@ -1,6 +1,6 @@
 # HTMLTi
 
-App pessoal (antigo Lançador) que guarda e roda apps HTML feitos no chat com o Claude.
+App pessoal (antigo Lançador) que guarda e roda apps HTML feitos no chat com o Claude, organizados em áreas e subáreas, com uma pasta por app.
 O mesmo `www/index.html` roda no PC (GitHub Pages, Chrome ou Edge) e no Android (APK Capacitor).
 
 **APK mais recente:** https://github.com/tiagomoura-dotcom/LancadorLBF/releases/download/ultima-versao/htmlti.apk
