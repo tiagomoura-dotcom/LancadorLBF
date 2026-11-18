@@ -580,7 +580,7 @@ legend{margin-bottom:2px;padding:0;font-size:14px;font-weight:600}
 <script>
 'use strict';
 
-const VERSAO = '2.1';
+const VERSAO = '2.2';
 const CONFLITO = /\.sync-conflict-[^.]*/;
 const SANDBOX = 'allow-scripts allow-forms allow-modals allow-popups allow-popups-to-escape-sandbox allow-downloads allow-pointer-lock';
 const PERMISSOES = 'fullscreen *; autoplay *; clipboard-write *; encrypted-media *; picture-in-picture *; microphone *; camera *';
@@ -1542,6 +1542,34 @@ function analisarHtml(texto) {
     precisaCompat: usaIndexedDB || temEmbed || /document\.cookie/.test(texto)
   };
 }
+// Código JavaScript -> endereço data: (base64 de UTF-8), para usar como src de <script>
+function codigoParaDataUrl(codigo) {
+  const bytes = new TextEncoder().encode(codigo);
+  let bin = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+  return 'data:text/javascript;charset=utf-8;base64,' + btoa(bin);
+}
+// Apps importados antes desta versão têm as bibliotecas copiadas como texto solto, sem defer
+// e com um onload que nunca dispara. Ao abrir, essas cópias viram <script defer src="data:...">,
+// que roda depois da página carregar e dispara o onload. O arquivo guardado não muda.
+function repararCopias(html) {
+  if (!/<script\b[^>]*\bdata-copia-de[^>]*\bonload=|<script\b[^>]*\bonload=[^>]*\bdata-copia-de/i.test(html)) return html;
+  try {
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    let mudou = false;
+    for (const s of $$('script[data-copia-de]:not([src])', doc)) {
+      if (!s.hasAttribute('onload')) continue;
+      s.setAttribute('src', codigoParaDataUrl(s.textContent.replace(/<\\\/script/gi, '</script')));
+      s.setAttribute('defer', '');
+      s.textContent = '';
+      mudou = true;
+    }
+    if (!mudou) return html;
+    const dt = /^\s*<!doctype[^>]*>/i.exec(html);
+    return (dt ? dt[0].trim() : '<!DOCTYPE html>') + '\n' + doc.documentElement.outerHTML;
+  } catch (e) { console.warn(e); return html; }
+}
+
 async function embutirRecursos(texto) {
   const doc = new DOMParser().parseFromString(texto, 'text/html');
   const remoto = u => /^(https?:)?\/\//i.test(u || '');
@@ -1556,11 +1584,11 @@ async function embutirRecursos(texto) {
       const r = await fetch(absoluta(src));
       if (!r.ok) throw new Error('HTTP ' + r.status);
       const codigo = await r.text();
-      const novo = doc.createElement('script');
-      for (const at of Array.from(s.attributes)) if (!['src', 'integrity', 'crossorigin', 'async', 'defer', 'referrerpolicy'].includes(at.name)) novo.setAttribute(at.name, at.value);
-      novo.setAttribute('data-copia-de', src);
-      novo.textContent = codigo.replace(/<\/script/gi, '<\\/script');
-      s.replaceWith(novo);
+      // A cópia vira src="data:..." e mantém defer, async e onload. (Como texto embutido, o
+      // onload nunca disparava: a receita do KaTeX, onload="renderMathInElement(...)", parava.)
+      for (const at of ['integrity', 'crossorigin', 'referrerpolicy']) s.removeAttribute(at);
+      s.setAttribute('src', codigoParaDataUrl(codigo));
+      s.setAttribute('data-copia-de', src);
     } catch (e) { falhas.push(src); }
   }
   for (const l of $$('link[rel~="stylesheet"][href]', doc)) {
@@ -2058,7 +2086,7 @@ function montarFrame() {
   f.setAttribute('allow', PERMISSOES);
   f.setAttribute('allowfullscreen', '');
   f.title = r.app.nome;
-  f.srcdoc = injetarShim(r.html, shimScript(r));
+  f.srcdoc = injetarShim(repararCopias(r.html), shimScript(r));
   $('#runFrame').replaceChildren(f);
   r.frame = f;
 }

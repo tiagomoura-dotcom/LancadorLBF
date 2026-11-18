@@ -1,5 +1,5 @@
 // Guarda o HTMLTi para abrir sem internet no PC (instalado pelo Chrome ou Edge).
-const CACHE = 'lancador-v6';
+const CACHE = 'lancador-v7';
 const ARQUIVOS = ['./', './index.html', './nativo.js', './manifest.webmanifest', './icone.svg', './icone-192.png', './icone-512.png', './icone-maskable.png'];
 
 self.addEventListener('install', e => {
