@@ -580,7 +580,7 @@ legend{margin-bottom:2px;padding:0;font-size:14px;font-weight:600}
 <script>
 'use strict';
 
-const VERSAO = '2.2';
+const VERSAO = '2.3';
 const CONFLITO = /\.sync-conflict-[^.]*/;
 const SANDBOX = 'allow-scripts allow-forms allow-modals allow-popups allow-popups-to-escape-sandbox allow-downloads allow-pointer-lock';
 const PERMISSOES = 'fullscreen *; autoplay *; clipboard-write *; encrypted-media *; picture-in-picture *; microphone *; camera *';
@@ -2026,6 +2026,62 @@ function shimDoApp(init) {
     };
   });
 
+  // LaTeX: se o app terminar de carregar e ainda houver \( \), \[ \], $$ $$ ou \begin{...}
+  // sem renderizar (biblioteca que não carregou, carregou fora de ordem ou não existe),
+  // o HTMLTi renderiza com o KaTeX dele. Repete quando o app troca de aba ou muda o conteúdo.
+  var LATEX = /\\\(|\\\[|\$\$|\\begin\{(equation|align|gather|multline|eqnarray|alignat|CD)\*?\}/;
+  var IGNORAR = /^(SCRIPT|NOSCRIPT|STYLE|TEXTAREA|PRE|CODE|OPTION|SVG|MATH|MJX-CONTAINER|ANNOTATION)$/;
+  var DELIMS = [
+    { left: '$$', right: '$$', display: true }, { left: '\\[', right: '\\]', display: true }, { left: '\\(', right: '\\)', display: false },
+    { left: '\\begin{equation}', right: '\\end{equation}', display: true }, { left: '\\begin{equation*}', right: '\\end{equation*}', display: true },
+    { left: '\\begin{align}', right: '\\end{align}', display: true }, { left: '\\begin{align*}', right: '\\end{align*}', display: true },
+    { left: '\\begin{gather}', right: '\\end{gather}', display: true }, { left: '\\begin{gather*}', right: '\\end{gather*}', display: true },
+    { left: '\\begin{multline}', right: '\\end{multline}', display: true }, { left: '\\begin{CD}', right: '\\end{CD}', display: true }
+  ];
+  function temLatexCru(raiz) {
+    if (!raiz) return false;
+    var w = document.createTreeWalker(raiz, NodeFilter.SHOW_TEXT, {
+      acceptNode: function (n) {
+        for (var e = n.parentElement; e && e !== raiz.parentElement; e = e.parentElement) {
+          if (IGNORAR.test(e.tagName.toUpperCase()) || (e.classList && (e.classList.contains('katex') || e.classList.contains('MathJax')))) return NodeFilter.FILTER_REJECT;
+        }
+        return LATEX.test(n.nodeValue) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP;
+      }
+    });
+    return !!w.nextNode();
+  }
+  var katexPronto = null, renderizando = false;
+  function carregarKatex() {
+    if (!katexPronto) katexPronto = pedir('latex', {}).then(function (k) {
+      var st = document.createElement('style'); st.setAttribute('data-htmlti', 'katex'); st.textContent = k.css;
+      (document.head || document.documentElement).appendChild(st);
+      // Usa uma cópia própria, sem mexer no window.katex do app (se houver)
+      var antigo = window.katex, antigoRender = window.renderMathInElement;
+      (0, eval)(k.js); (0, eval)(k.auto);
+      var meu = { katex: window.katex, render: window.renderMathInElement };
+      if (antigo) window.katex = antigo; if (antigoRender) window.renderMathInElement = antigoRender;
+      return meu;
+    });
+    return katexPronto;
+  }
+  function renderizarLatex() {
+    if (renderizando || !temLatexCru(document.body)) return;
+    renderizando = true;
+    carregarKatex().then(function (k) {
+      if (!k.render) return;
+      var antes = window.katex;
+      window.katex = k.katex; // o auto-render usa window.katex
+      try { k.render(document.body, { delimiters: DELIMS, throwOnError: false, strict: 'ignore', trust: false, ignoredClasses: ['katex', 'MathJax', 'nao-latex'] }); }
+      finally { if (antes && antes !== k.katex) window.katex = antes; }
+    }).catch(function () {}).then(function () { renderizando = false; });
+  }
+  var esperaLatex = null;
+  function agendarLatex(ms) { clearTimeout(esperaLatex); esperaLatex = setTimeout(renderizarLatex, ms); }
+  window.addEventListener('load', function () {
+    agendarLatex(1200); // dá tempo para a biblioteca do próprio app renderizar primeiro
+    new MutationObserver(function () { agendarLatex(400); }).observe(document.body || document.documentElement, { childList: true, subtree: true, characterData: true });
+  });
+
   // API para os apps feitos para o Lançador
   definir('lancador', {
     versao: 2,
@@ -2231,6 +2287,18 @@ async function apagarDadosApp() {
 }
 
 /* ---------- Pedidos do app (arquivos) ---------- */
+// KaTeX que vem com o HTMLTi (www/katex), entregue ao app que ficou com LaTeX sem renderizar
+let katexCache = null;
+function katexDoHTMLTi() {
+  if (!katexCache) {
+    const ler = c => fetch(c).then(x => { if (!x.ok) throw new Error('HTTP ' + x.status); return x.text(); });
+    katexCache = Promise.all(['katex/katex.css', 'katex/katex.min.js', 'katex/auto-render.min.js'].map(ler))
+      .then(([css, js, auto]) => ({ css, js, auto }))
+      .catch(e => { katexCache = null; throw e; });
+  }
+  return katexCache;
+}
+
 async function tratarPedido(r, m) {
   let resultado = null, erro = null;
   try {
@@ -2239,6 +2307,7 @@ async function tratarPedido(r, m) {
     else if (m.tipo === 'escolher') resultado = await fluxoEscolher(r, dados);
     else if (m.tipo === 'listar') resultado = await listarArquivosApp(r.app, dados.pasta);
     else if (m.tipo === 'ler') resultado = await lerArquivoApp(r.app, dados.caminho);
+    else if (m.tipo === 'latex') resultado = await katexDoHTMLTi();
     else erro = 'Pedido desconhecido: ' + m.tipo;
   } catch (e) { erro = (e && e.message) || String(e); }
   if (S.running === r && r.frame && r.frame.contentWindow) r.frame.contentWindow.postMessage({ lancador: 'resposta', id: m.id, resultado, erro }, '*');

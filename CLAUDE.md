@@ -19,7 +19,7 @@ Os três aparelhos compartilham uma pasta sincronizada pelo Syncthing. A própri
 - Link do APK (não mudar): `https://github.com/tiagomoura-dotcom/LancadorLBF/releases/download/ultima-versao/htmlti.apk`.
 - Não reescreva a lógica do `index.html` para o Android. A integração nativa é só `window.LancadorNativo` (em `nativo.js`) e a chamada a `window.lancadorVoltar()`.
 - Mudanças de comportamento são feitas no `index.html` e valem para todos os aparelhos.
-- Ao mudar qualquer arquivo de `www/`, aumente a versão do cache em `sw.js` (`lancador-v6` para `lancador-v7` e assim por diante), para o PC pegar a versão nova.
+- Ao mudar qualquer arquivo de `www/`, aumente a versão do cache em `sw.js` (`lancador-v8` para `lancador-v9` e assim por diante), para o PC pegar a versão nova.
 - Não edite `android/app/src/main/assets/public` (gerado por `npx cap sync android`) nem os `mipmap-*/ic_launcher*.png` (gerados por `npm run icones` a partir de `www/icone-512.png`).
 - O botão "<" do app aberto e o Voltar do Android fecham o app direto (`fecharAppInterno`); não use `history.back()` para isso, porque apps que mudam o `#` criam entradas no histórico.
 
@@ -52,6 +52,7 @@ Os apps rodam isolados (iframe `srcdoc` com sandbox). Sem mudar nada neles:
 - `localStorage` e `window.storage` são gravados no `estado.json` do app e sincronizam;
 - downloads (`<a download>`, `showSaveFilePicker`) abrem um "Salvar como" e vão para `exportados`;
 - `<input type="file">` e `showOpenFilePicker` mostram primeiro os arquivos da pasta do app, e o que vier do aparelho é copiado para `importados`;
+- LaTeX: se, depois que o app carrega (e a cada mudança no conteúdo), ainda houver `\(…\)`, `\[…\]`, `$$…$$` ou `\begin{equation|align|…}` sem renderizar fora de `pre`/`code`, o shim pede o KaTeX do HTMLTi (`www/katex/`, fontes embutidas, gerado por `npm run katex`) e renderiza. Apps cujo KaTeX/MathJax funciona não são tocados. A cópia offline de bibliotecas usa `<script src="data:…">` para manter `defer`/`onload`, e `repararCopias()` conserta cópias antigas ao abrir;
 - links `href="#..."` só trocam o `#` (sem o shim, o `srcdoc` carregaria o HTMLTi dentro do app) e `history.pushState` não dá erro.
 
 Apps feitos para o HTMLTi também podem usar diretamente:
